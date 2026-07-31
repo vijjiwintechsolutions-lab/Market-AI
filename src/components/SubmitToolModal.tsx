@@ -17,7 +17,7 @@ export const SubmitToolModal: React.FC<SubmitToolModalProps> = ({
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(CATEGORIES_LIST[1]);
+  const [category, setCategory] = useState<string>(CATEGORIES_LIST[1] || 'Text & Writing');
   const [provider, setProvider] = useState('Google Gemini');
   const [pricing, setPricing] = useState<'Free' | 'Freemium' | 'Paid'>('Free');
   const [apiEndpoint, setApiEndpoint] = useState('');

@@ -50,7 +50,6 @@ export const BreadcrumbBar: React.FC<BreadcrumbBarProps> = ({
 
   const tabLabels: Record<string, { label: string; icon: React.ReactNode }> = {
     marketplace: { label: 'Marketplace', icon: <Home className="w-3.5 h-3.5" /> },
-    prompts: { label: 'Prompt Library', icon: <BookOpen className="w-3.5 h-3.5" /> },
     history: { label: 'Dashboard & History', icon: <History className="w-3.5 h-3.5" /> },
   };
 

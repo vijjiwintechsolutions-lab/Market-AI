@@ -788,6 +788,74 @@ app.post('/api/ai/analyze', async (req, res) => {
   }
 });
 
+// AI Consultant Recommendation Engine
+app.post('/api/ai/consultant', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { message, conversationHistory } = req.body;
+    const userMessage = message || 'What are the best AI tools on Market1 for my project?';
+
+    const systemInstruction = `You are the Market1 AI Senior Consultant & Solution Architect.
+Market1 AI is the world's leading AI Tools Marketplace with 800+ tools across categories:
+1. Text & Writing (Gemini AI Chat, SEO Article Writer, AI Email Assistant, Code Explainer)
+2. Image & Design (Flux Image Generator, AI Logo Studio, Photo Background Remover, Avatar Creator)
+3. Video & Motion (Google Veo Video Synth, AI Shorts Generator, Video Translator)
+4. Audio & Voice (Gemini TTS Voice Synth, Music & Audio FX Generator, Voice Cloner)
+5. Developer & Code (Full-Stack Code Synthesizer, SQL Query Builder, Bug Fixer)
+6. Business & Data (Pitch Deck Creator, Market Research Agent, Financial Analyst)
+7. Autonomous Agents (Multi-Agent Task Executor, Web Scraping Agent)
+
+Your goal is to understand the user's specific project requirement, recommend the most effective tools on Market1 AI, explain how they work, detail the credit consumption (1-8 credits/task), and guide them on how to combine tools for maximum efficiency.
+Keep responses concise, clear, encouraging, structured in Markdown, and format tool names in bold (e.g., **Gemini AI Chat & Assistant**, **Google Veo Video Synth**, **SEO Article & Blog Writer**).`;
+
+    const ai = getGenAI();
+    if (ai) {
+      try {
+        const contentsParts: any[] = [];
+        if (Array.isArray(conversationHistory)) {
+          conversationHistory.forEach((msg: any) => {
+            if (msg.role && msg.content) {
+              contentsParts.push({ text: `${msg.role === 'user' ? 'User' : 'Consultant'}: ${msg.content}` });
+            }
+          });
+        }
+        contentsParts.push({ text: `User Requirement: ${userMessage}` });
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.6-flash',
+          contents: contentsParts,
+          config: { systemInstruction },
+        });
+
+        return res.json({
+          success: true,
+          output: response.text || 'I recommend exploring our flagship Gemini Chat and Veo Video tools on Market1 AI.',
+          executionTimeMs: Date.now() - startTime,
+          provider: 'Google Gemini AI Consultant',
+        });
+      } catch (err: any) {
+        console.warn('Gemini Consultant AI fallback used:', err.message || err);
+      }
+    }
+
+    // Intelligent Fallback Consultant Response
+    let fallback = `### 💡 Market1 AI Tool Recommendation\n\nBased on your prompt: "${userMessage}"\n\nHere are the top recommended tools on Market1 AI for your workflow:\n\n1. **Gemini AI Chat & Assistant** (1 Credit/task) - Ideal for strategy, drafting, and problem solving.\n2. **Google Veo Video Synth** (5 Credits/task) - Create cinematic 1080p 60FPS video content.\n3. **SEO Article & Blog Writer** (2 Credits/task) - Generate structured long-form content instantly.\n\n*Feel free to ask for specific tool combinations or credit tier details!*`;
+
+    return res.json({
+      success: true,
+      output: fallback,
+      executionTimeMs: Date.now() - startTime,
+      provider: 'Market1 Solution Engine',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Consultant failed to respond',
+      executionTimeMs: Date.now() - startTime,
+    });
+  }
+});
+
 // ==========================================
 // VITE & PRODUCTION SETUP
 // ==========================================

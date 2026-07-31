@@ -12,8 +12,13 @@ import {
   Grid, 
   History,
   SlidersHorizontal,
-  Flame
+  Flame,
+  Coins,
+  User as UserIcon,
+  LogIn,
+  Bell
 } from 'lucide-react';
+import { User } from '../lib/firebase';
 
 interface HeaderProps {
   activeTab: 'marketplace' | 'providers' | 'prompts' | 'history';
@@ -26,6 +31,12 @@ interface HeaderProps {
   setIsDarkMode: (val: boolean) => void;
   totalToolsCount: number;
   openLatencySettings?: () => void;
+  openPricingModal?: () => void;
+  userCredits?: number;
+  currentUser?: User | null;
+  openAuthModal?: () => void;
+  openNewToolsModal?: () => void;
+  unreadNewToolsCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,6 +50,12 @@ export const Header: React.FC<HeaderProps> = ({
   setIsDarkMode,
   totalToolsCount,
   openLatencySettings,
+  openPricingModal,
+  userCredits = 100,
+  currentUser,
+  openAuthModal,
+  openNewToolsModal,
+  unreadNewToolsCount = 3,
 }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -146,18 +163,6 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <button
-              onClick={() => setActiveTab('prompts')}
-              className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 transition-all ${
-                activeTab === 'prompts'
-                  ? 'bg-white/10 text-indigo-300 border border-white/10 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Prompts</span>
-            </button>
-
-            <button
               onClick={() => setActiveTab('history')}
               className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 relative transition-all ${
                 activeTab === 'history'
@@ -177,13 +182,70 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            {openNewToolsModal && (
+              <button
+                onClick={openNewToolsModal}
+                className="p-1.5 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 font-bold text-xs rounded shadow flex items-center justify-center relative transition-all cursor-pointer"
+                title="New AI Tools & Release Updates"
+              >
+                <Bell className="w-4 h-4 text-amber-300" />
+                {unreadNewToolsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white font-extrabold text-[9px] rounded-full flex items-center justify-center border border-[#0D0D12]">
+                    {unreadNewToolsCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {openPricingModal && (
+              <button
+                onClick={openPricingModal}
+                className="px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold text-xs rounded shadow flex items-center gap-1.5 transition-all cursor-pointer font-mono"
+                title="View Tool Credit Tiers & Pricing"
+              >
+                <Coins className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Pricing & Credits</span>
+                <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-200 text-[10px] font-extrabold">
+                  {userCredits} Crs
+                </span>
+              </button>
+            )}
+
             <button
               onClick={openSubmitModal}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded shadow flex items-center gap-1.5 transition-all active:scale-95 uppercase tracking-wider"
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded shadow flex items-center gap-1.5 transition-all active:scale-95 uppercase tracking-wider cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Submit Tool</span>
             </button>
+
+            {/* AUTH / PROFILE BUTTON */}
+            {openAuthModal && (
+              <button
+                onClick={openAuthModal}
+                className="px-2.5 py-1.5 bg-[#181824] hover:bg-indigo-950/50 text-slate-200 border border-white/15 font-bold text-xs rounded shadow flex items-center gap-2 transition-all cursor-pointer font-mono"
+                title={currentUser ? `Signed in as ${currentUser.email}` : 'Sign In / Register'}
+              >
+                {currentUser ? (
+                  currentUser.photoURL ? (
+                    <img
+                      src={currentUser.photoURL}
+                      alt="User Avatar"
+                      className="w-4 h-4 rounded-full border border-indigo-400"
+                    />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-extrabold">
+                      {(currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )
+                ) : (
+                  <LogIn className="w-3.5 h-3.5 text-indigo-400" />
+                )}
+                <span className="hidden sm:inline font-sans">
+                  {currentUser ? currentUser.displayName?.split(' ')[0] || currentUser.email?.split('@')[0] : 'Sign In'}
+                </span>
+              </button>
+            )}
           </div>
 
         </div>

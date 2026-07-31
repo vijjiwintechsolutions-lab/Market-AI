@@ -24,6 +24,7 @@ interface HeroSectionProps {
   sortBy: string;
   setSortBy: (s: string) => void;
   totalFilteredCount: number;
+  onSelectTag?: (tag: string) => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
@@ -36,7 +37,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   sortBy,
   setSortBy,
   totalFilteredCount,
+  onSelectTag,
 }) => {
+  const popularTags = [
+    'Chat', 'SEO', 'Resume', 'Image', 'Avatar', 'Video', 'Cinema', 'Voice', 'Audio', 
+    'PDF', 'Document', 'Code', 'Dev', 'Business', 'Analytics', 'Marketing', 'Automation'
+  ];
   return (
     <div className="relative overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] border-b border-white/10 pt-6 pb-6 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="w-full relative z-10 space-y-6">
@@ -120,6 +126,30 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   }`}
                 >
                   {cat}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Live Tags Bar */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none font-mono">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 mr-1 shrink-0">
+              Live Tags:
+            </span>
+            {popularTags.map((tag) => {
+              const q = searchQuery.toLowerCase().replace(/^#/, '');
+              const isTagActive = q === tag.toLowerCase();
+              return (
+                <button
+                  key={tag}
+                  onClick={() => onSelectTag ? onSelectTag(tag) : setSearchQuery(tag)}
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap transition-all border cursor-pointer ${
+                    isTagActive
+                      ? 'bg-indigo-600 text-white border-indigo-400 font-bold shadow'
+                      : 'bg-indigo-950/40 text-indigo-300 border-indigo-500/25 hover:bg-indigo-600/80 hover:text-white'
+                  }`}
+                >
+                  #{tag}
                 </button>
               );
             })}

@@ -934,6 +934,46 @@ function generateCatalogForCategory(spec: CategorySpec, countNeeded: number): AI
   return generated;
 }
 
+export function getToolTierInfo(tool: {
+  category?: string;
+  subcategory?: string;
+  name?: string;
+  outputType?: string;
+}): { tier: string; credits: number; payPerTask: string } {
+  const cat = (tool.category || '').toLowerCase();
+  const sub = (tool.subcategory || '').toLowerCase();
+  const name = (tool.name || '').toLowerCase();
+  const out = (tool.outputType || '').toLowerCase();
+
+  // Tier 6: AI Agent (50 credits, ₹99)
+  if (name.includes('agent') || sub.includes('agent') || cat.includes('agent') || name.includes('autonomous') || sub.includes('automation')) {
+    return { tier: 'Tier 6', credits: 50, payPerTask: '₹99' };
+  }
+
+  // Tier 5: AI Video (20 credits, ₹40)
+  if (out === 'video' || cat.includes('video') || sub.includes('video') || name.includes('video') || name.includes('cinema') || sub.includes('animation')) {
+    return { tier: 'Tier 5', credits: 20, payPerTask: '₹40' };
+  }
+
+  // Tier 4: AI Voice & AI Music (10 credits, ₹20)
+  if (out === 'audio' || cat.includes('audio') || sub.includes('audio') || sub.includes('voice') || name.includes('voice') || name.includes('speech') || sub.includes('music') || name.includes('music') || name.includes('song')) {
+    return { tier: 'Tier 4', credits: 10, payPerTask: '₹20' };
+  }
+
+  // Tier 3: AI Image & AI Logo (5 credits, ₹10)
+  if (out === 'image' || cat.includes('image') || sub.includes('image') || name.includes('image') || sub.includes('logo') || name.includes('logo') || name.includes('avatar') || sub.includes('design')) {
+    return { tier: 'Tier 3', credits: 5, payPerTask: '₹10' };
+  }
+
+  // Tier 2: AI Writer, AI Resume, AI Coding (2 credits, ₹5)
+  if (out === 'code' || cat.includes('coding') || sub.includes('code') || sub.includes('dev') || name.includes('resume') || sub.includes('resume') || sub.includes('article') || sub.includes('writer') || name.includes('writer') || name.includes('blog') || cat.includes('seo') || cat.includes('copywriting')) {
+    return { tier: 'Tier 2', credits: 2, payPerTask: '₹5' };
+  }
+
+  // Tier 1: AI Chat, AI Translator, AI Grammar (1 credit, ₹2)
+  return { tier: 'Tier 1', credits: 1, payPerTask: '₹2' };
+}
+
 // Build total dataset of 800+ tools
 function buildFullToolsList(): AITool[] {
   const tools: AITool[] = [...FEATURED_TOOLS];
@@ -948,7 +988,16 @@ function buildFullToolsList(): AITool[] {
     tools.push(...newTools);
   });
 
-  return tools;
+  // Enrich all tools with official Tier, Credits, and Pay/Task pricing
+  return tools.map((t) => {
+    const tierInfo = getToolTierInfo(t);
+    return {
+      ...t,
+      tier: t.tier || tierInfo.tier,
+      credits: t.credits || tierInfo.credits,
+      payPerTask: t.payPerTask || tierInfo.payPerTask,
+    };
+  });
 }
 
 export const TOOLS_DATA: AITool[] = buildFullToolsList();

@@ -35,6 +35,7 @@ interface ToolCardProps {
   onToggleFavorite: (toolId: string) => void;
   isCompared: boolean;
   onToggleCompare: (tool: AITool) => void;
+  onSelectTag?: (tag: string) => void;
 }
 
 export const ToolCard: React.FC<ToolCardProps> = ({
@@ -44,7 +45,17 @@ export const ToolCard: React.FC<ToolCardProps> = ({
   onToggleFavorite,
   isCompared,
   onToggleCompare,
+  onSelectTag,
 }) => {
+  const [copiedShare, setCopiedShare] = React.useState(false);
+
+  const handleShareTool = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const deepLink = `${window.location.origin}${window.location.pathname}?tool=${encodeURIComponent(tool.id)}`;
+    navigator.clipboard.writeText(deepLink);
+    setCopiedShare(true);
+    setTimeout(() => setCopiedShare(false), 2000);
+  };
   // Map string icon names to Lucide icon components
   const renderIcon = (iconName: string, className = 'w-5 h-5 text-indigo-400') => {
     const props = { className };
@@ -191,10 +202,13 @@ export const ToolCard: React.FC<ToolCardProps> = ({
   const banner = getCategoryBanner(tool.category);
 
   return (
-    <div className="group relative bg-[#0F0F13] border border-white/10 hover:border-indigo-500/50 rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-0.5">
+    <div className="group relative bg-[#0F0F13] border border-white/10 hover:border-indigo-500/60 rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-1 hover:scale-[1.01]">
       
+      {/* SUBTLE HOVER PULSE BORDER GLOW */}
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/0 via-indigo-500/30 to-purple-500/0 rounded-xl opacity-0 group-hover:opacity-100 group-hover:animate-pulse transition-opacity pointer-events-none blur-sm" />
+
       {/* REAL TILE THUMBNAIL HEADER */}
-      <div className="relative h-36 w-full bg-slate-950 border-b border-white/10 overflow-hidden group">
+      <div className="relative h-24 w-full bg-slate-950 border-b border-white/10 overflow-hidden group">
         {/* Real Thumbnail Background Image */}
         <img
           src={thumbnailUrl}
@@ -207,17 +221,17 @@ export const ToolCard: React.FC<ToolCardProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-[#0F0F13] via-[#0F0F13]/40 to-black/30"></div>
 
         {/* Content Overlay */}
-        <div className="relative z-10 h-full flex flex-col justify-between p-3">
+        <div className="relative z-10 h-full flex flex-col justify-between p-2">
           {/* Top Row: Subcategory Badge & Action Buttons */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="px-2 py-0.5 bg-black/70 backdrop-blur-md border border-white/15 rounded text-[10px] font-mono text-indigo-200 font-bold tracking-wide shadow-md flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              {tool.subcategory}
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="px-1.5 py-0.5 bg-black/70 backdrop-blur-md border border-white/15 rounded text-[9px] font-mono text-indigo-200 font-bold tracking-wide shadow-md flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="truncate max-w-[90px]">{tool.subcategory}</span>
             </span>
 
             <div className="flex items-center gap-1">
               {tool.badge && (
-                <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border shadow-md backdrop-blur-md ${
+                <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shadow-md backdrop-blur-md ${
                   tool.badge === 'HOT' ? 'bg-rose-500/80 text-white border-rose-400' :
                   tool.badge === 'POPULAR' ? 'bg-amber-500/80 text-white border-amber-400' :
                   'bg-emerald-500/80 text-white border-emerald-400'
@@ -231,14 +245,14 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                   e.stopPropagation();
                   onToggleFavorite(tool.id);
                 }}
-                className={`p-1.5 rounded-lg backdrop-blur-md border transition-all ${
+                className={`p-1 rounded-md backdrop-blur-md border transition-all cursor-pointer ${
                   isFavorite
                     ? 'bg-rose-500/80 text-white border-rose-400 shadow'
                     : 'bg-black/60 text-slate-200 border-white/20 hover:text-rose-400 hover:bg-black/80'
                 }`}
                 title={isFavorite ? 'Remove from Saved' : 'Save Tool'}
               >
-                <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-white text-white' : ''}`} />
+                <Heart className={`w-3 h-3 ${isFavorite ? 'fill-white text-white' : ''}`} />
               </button>
 
               <button
@@ -246,25 +260,41 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                   e.stopPropagation();
                   onToggleCompare(tool);
                 }}
-                className={`px-2 py-1 rounded-lg backdrop-blur-md border text-[10px] font-mono font-bold flex items-center gap-1 transition-all ${
+                className={`px-1.5 py-0.5 rounded-md backdrop-blur-md border text-[9px] font-mono font-bold flex items-center gap-0.5 transition-all cursor-pointer ${
                   isCompared
                     ? 'bg-indigo-600 text-white border-indigo-400 shadow'
                     : 'bg-black/60 text-slate-200 border-white/20 hover:text-white hover:bg-black/80'
                 }`}
                 title="Compare tool"
               >
-                {isCompared ? <Check className="w-3 h-3 text-white" /> : <span>VS</span>}
+                {isCompared ? <Check className="w-2.5 h-2.5 text-white" /> : <span>VS</span>}
+              </button>
+
+              <button
+                onClick={handleShareTool}
+                className={`p-1 rounded-md backdrop-blur-md border transition-all duration-300 transform cursor-pointer ${
+                  copiedShare
+                    ? 'bg-emerald-500/90 text-white border-emerald-400 shadow-lg shadow-emerald-500/40 scale-125 ring-2 ring-emerald-400/60'
+                    : 'bg-black/60 text-slate-200 border-white/20 hover:text-indigo-300 hover:bg-black/80 hover:scale-110 active:scale-95'
+                }`}
+                title={copiedShare ? 'Deep-Link Copied!' : 'Share Deep-Link to Tool'}
+              >
+                {copiedShare ? (
+                  <Check className="w-3 h-3 text-white scale-110 transition-transform" />
+                ) : (
+                  <Share2 className="w-3 h-3" />
+                )}
               </button>
             </div>
           </div>
 
           {/* Bottom Row: Icon & Tool Category */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-black/80 backdrop-blur-md border border-white/25 flex items-center justify-center p-2 shadow-lg group-hover:border-indigo-400/80 transition-colors">
-              {renderIcon(tool.iconName, 'w-5 h-5 text-indigo-300')}
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-md bg-black/80 backdrop-blur-md border border-white/25 flex items-center justify-center p-1 shadow-lg group-hover:border-indigo-400/80 transition-colors shrink-0">
+              {renderIcon(tool.iconName, 'w-4 h-4 text-indigo-300')}
             </div>
-            <div>
-              <span className="text-[10px] font-mono text-emerald-300 font-bold uppercase tracking-wider bg-black/60 px-1.5 py-0.5 rounded border border-white/10">
+            <div className="min-w-0">
+              <span className="text-[9px] font-mono text-emerald-300 font-bold uppercase tracking-wider bg-black/60 px-1 py-0.5 rounded border border-white/10 truncate block">
                 {tool.category}
               </span>
             </div>
@@ -273,52 +303,77 @@ export const ToolCard: React.FC<ToolCardProps> = ({
       </div>
 
       {/* CARD BODY */}
-      <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+      <div className="p-2.5 space-y-2 flex-1 flex flex-col justify-between">
         
-        <div className="space-y-2">
-          {/* Title & Category Line */}
+        <div className="space-y-1.5">
+          {/* Title & Highlighted Developer Provider Badge */}
           <div>
-            <h3 className="font-bold text-white text-sm group-hover:text-indigo-300 transition-colors line-clamp-1">
+            <h3 className="font-bold text-white text-xs group-hover:text-indigo-300 transition-colors line-clamp-1">
               {tool.name}
             </h3>
-            <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-              {tool.category} • <span className="text-slate-300">{tool.subcategory}</span>
-            </p>
+            <div className="flex items-center gap-1 mt-1">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#161622] group-hover:bg-indigo-950/80 border border-white/10 group-hover:border-indigo-400/80 transition-all duration-300 shadow-sm group-hover:shadow-[0_0_12px_rgba(99,102,241,0.5)] group-hover:animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 group-hover:bg-amber-300 animate-pulse shrink-0" />
+                <span className="text-[10px] font-mono font-bold text-slate-300 group-hover:text-amber-200 transition-colors truncate max-w-[150px]">
+                  {tool.provider}
+                </span>
+              </span>
+            </div>
           </div>
 
           {/* Short Description */}
-          <p className="text-slate-300 text-xs line-clamp-2 leading-relaxed">
+          <p className="text-slate-300 text-[11px] line-clamp-2 leading-snug">
             {tool.description}
           </p>
 
           {/* Tags */}
-          <div className="flex flex-wrap gap-1 pt-1">
+          <div className="flex flex-wrap gap-0.5 pt-0.5">
             {tool.tags.slice(0, 3).map((tag, idx) => (
-              <span
+              <button
                 key={idx}
-                className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-slate-400 border border-white/5 font-mono"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectTag?.(tag);
+                }}
+                className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/10 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/20 font-mono transition-colors cursor-pointer"
+                title={`Live search tools tagged #${tag}`}
               >
                 #{tag}
-              </span>
+              </button>
             ))}
           </div>
         </div>
 
+        {/* TIER & CREDIT PRICING LINE */}
+        {tool.tier && (
+          <div className="flex items-center justify-between text-[10px] font-mono bg-white/[0.04] px-1.5 py-1 rounded border border-white/5">
+            <span className="px-1.5 py-0.2 bg-indigo-500/20 text-indigo-300 rounded text-[9px] font-bold border border-indigo-500/30 uppercase tracking-wide">
+              {tool.tier}
+            </span>
+            <span className="text-amber-300 font-bold text-[10px] flex items-center gap-1">
+              <span>{tool.credits} {tool.credits === 1 ? 'Cr' : 'Crs'}</span>
+              <span className="text-slate-500">•</span>
+              <span className="text-emerald-400 font-extrabold">{tool.payPerTask}/task</span>
+            </span>
+          </div>
+        )}
+
         {/* BOTTOM METRICS & LAUNCH CTA */}
-        <div className="pt-3 border-t border-white/5 space-y-2.5">
-          <div className="flex items-center justify-between text-xs font-mono">
+        <div className="pt-1.5 border-t border-white/5 space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] font-mono">
             <div className="flex items-center gap-1 text-amber-400 font-bold">
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
+              <Star className="w-3 h-3 fill-amber-400" />
               <span>{tool.rating}</span>
-              <span className="text-slate-500 font-normal">({tool.reviewCount})</span>
+              <span className="text-slate-500 font-normal text-[10px]">({tool.reviewCount})</span>
             </div>
 
-            <div className={`px-2 py-0.5 rounded border text-[10px] font-bold flex items-center gap-1 ${getLatencyColor(tool.latencyMs)}`}>
-              <Zap className="w-3 h-3" />
+            <div className={`px-1.5 py-0.2 rounded border text-[9px] font-bold flex items-center gap-0.5 ${getLatencyColor(tool.latencyMs)}`}>
+              <Zap className="w-2.5 h-2.5" />
               <span>{tool.latencyMs}ms</span>
             </div>
 
-            <div className="text-slate-400 text-[10px] font-semibold">
+            <div className="text-slate-400 text-[9px] font-semibold">
               {tool.pricing}
             </div>
           </div>
@@ -326,15 +381,33 @@ export const ToolCard: React.FC<ToolCardProps> = ({
           {/* Primary CTA Button */}
           <button
             onClick={() => onRunTool(tool)}
-            className="w-full py-2.5 px-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-xs rounded-lg shadow-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer uppercase tracking-wider font-mono group-hover:shadow-indigo-500/25"
+            className="w-full py-1.5 px-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold text-[11px] rounded-md shadow flex items-center justify-center gap-1 transition-all cursor-pointer uppercase tracking-wider font-mono group-hover:shadow-indigo-500/25"
           >
-            <Play className="w-3.5 h-3.5 fill-white" />
+            <Play className="w-3 h-3 fill-white" />
             <span>Launch Tool</span>
-            <ArrowUpRight className="w-3.5 h-3.5 opacity-80 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            <ArrowUpRight className="w-3 h-3 opacity-80 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </button>
         </div>
 
       </div>
+
+      {/* TEMPORARY COPIED TOAST NOTIFICATION */}
+      {copiedShare && (
+        <div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-3 bg-slate-950/95 border border-emerald-500/60 text-white px-4 py-3 rounded-xl shadow-2xl shadow-emerald-950/80 backdrop-blur-md font-mono text-xs pointer-events-none transition-all transform duration-300 animate-in fade-in slide-in-from-bottom-4 border-l-4 border-l-emerald-400">
+          <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/40">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+          </div>
+          <div>
+            <div className="font-bold text-emerald-300 flex items-center gap-2">
+              <span>Copied!</span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-sans font-medium">Deep-Link URL</span>
+            </div>
+            <p className="text-[11px] text-slate-300 font-sans mt-0.5">
+              Tool link for <strong className="text-white">{tool.name}</strong> copied to clipboard.
+            </p>
+          </div>
+        </div>
+      )}
 
     </div>
   );

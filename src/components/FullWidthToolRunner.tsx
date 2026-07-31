@@ -31,7 +31,9 @@ import {
   Trash2,
   Paperclip,
   Link as LinkIcon,
-  Activity
+  Activity,
+  Share2,
+  Heart
 } from 'lucide-react';
 import { AITool, ExecutionHistoryItem } from '../types';
 import { ToolCard } from './ToolCard';
@@ -56,6 +58,7 @@ interface FullWidthToolRunnerProps {
   onToggleFavorite: (id: string) => void;
   comparedTools: AITool[];
   onToggleCompare: (tool: AITool) => void;
+  onSelectTag?: (tag: string) => void;
 }
 
 export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
@@ -68,6 +71,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   onToggleFavorite,
   comparedTools,
   onToggleCompare,
+  onSelectTag,
 }) => {
   // Form input state initialized from tool inputs default values
   const [inputValues, setInputValues] = useState<Record<string, any>>(() => {
@@ -112,9 +116,17 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   } | null>(null);
   const [isLatencySettingsOpen, setIsLatencySettingsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedDeepLink, setCopiedDeepLink] = useState(false);
   const [userRating, setUserRating] = useState<number>(0);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleShareDeepLink = () => {
+    const deepLink = `${window.location.origin}${window.location.pathname}?tool=${encodeURIComponent(tool.id)}`;
+    navigator.clipboard.writeText(deepLink);
+    setCopiedDeepLink(true);
+    setTimeout(() => setCopiedDeepLink(false), 2000);
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -625,7 +637,19 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               {tool.description}
             </p>
 
-            <div className="flex items-center gap-4 text-xs font-mono text-slate-400 pt-1 flex-wrap">
+            <div className="flex items-center gap-3 text-xs font-mono text-slate-400 pt-1 flex-wrap">
+              {tool.tier && (
+                <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30 uppercase tracking-wider text-[11px]">
+                  {tool.tier}
+                </span>
+              )}
+              {tool.credits && (
+                <span className="text-amber-300 font-bold bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/20 flex items-center gap-1">
+                  <span>⚡ Deducts {tool.credits} {tool.credits === 1 ? 'Credit' : 'Credits'}</span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-emerald-400">{tool.payPerTask} / task</span>
+                </span>
+              )}
               <span>SLA Response: <strong className="text-emerald-400 font-bold">{tool.latencyMs}ms</strong></span>
               <span>Uptime: <strong className="text-teal-300 font-bold">{tool.uptimePercent || 99.9}%</strong></span>
               <span className="flex items-center gap-1 text-indigo-400 font-bold">
@@ -633,9 +657,48 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               </span>
               <span>Pricing: <strong className="text-slate-200">{tool.pricing}</strong></span>
             </div>
+
+            {/* Live Interactive Tags */}
+            {tool.tags && tool.tags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 font-mono">
+                <span className="text-[10px] text-slate-500 font-bold uppercase">Tags:</span>
+                {tool.tags.map((tag, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => onSelectTag?.(tag)}
+                    className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/10 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/20 font-mono transition-colors cursor-pointer"
+                    title={`Filter all tools tagged #${tag}`}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
+            <button
+              onClick={handleShareDeepLink}
+              className={`px-3 py-2 border font-mono text-xs font-bold rounded flex items-center gap-1.5 transition-all duration-300 transform cursor-pointer ${
+                copiedDeepLink
+                  ? 'bg-emerald-500/30 border-emerald-400 text-emerald-200 shadow-lg shadow-emerald-500/30 scale-110 ring-2 ring-emerald-400/50'
+                  : 'bg-indigo-600/20 hover:bg-indigo-600/30 border-indigo-500/30 text-indigo-300 hover:scale-105 active:scale-95'
+              }`}
+              title="Copy Deep-Link URL to clipboard"
+            >
+              {copiedDeepLink ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400 scale-125 transition-transform" />
+                  <span>Link Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Share Tool</span>
+                </>
+              )}
+            </button>
             <button
               onClick={() => setIsLatencySettingsOpen(true)}
               className="px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold rounded flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1038,8 +1101,57 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
               {/* TEXT / CODE OUTPUT */}
               {outputResult && (
-                <div className="space-y-3">
-                  <div className="relative bg-[#0A0A0A] border border-white/10 rounded p-4 text-xs text-slate-200 font-mono whitespace-pre-wrap max-h-[420px] overflow-y-auto leading-relaxed shadow-inner">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-bold text-slate-400 font-mono uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-indigo-400" />
+                      Generated Output Content
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (outputResult) {
+                          navigator.clipboard.writeText(outputResult);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow ${
+                        copied
+                          ? 'bg-emerald-600 text-white border border-emerald-400'
+                          : 'bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/40'
+                      }`}
+                      title="Copy generated output to clipboard"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-200" />
+                          <span>Copied to Clipboard!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy Output</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="relative group bg-[#0A0A0A] border border-white/10 rounded-lg p-4 text-xs text-slate-200 font-mono whitespace-pre-wrap max-h-[420px] overflow-y-auto leading-relaxed shadow-inner">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (outputResult) {
+                          navigator.clipboard.writeText(outputResult);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }
+                      }}
+                      className="absolute top-3 right-3 px-2.5 py-1 bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white rounded text-[11px] font-mono flex items-center gap-1 transition-all opacity-80 group-hover:opacity-100 cursor-pointer border border-white/10"
+                      title="Copy to clipboard"
+                    >
+                      {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copied ? 'Copied' : 'Copy'}</span>
+                    </button>
                     {outputResult}
                   </div>
                 </div>
@@ -1169,6 +1281,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 onToggleFavorite={onToggleFavorite}
                 onToggleCompare={onToggleCompare}
                 onRunTool={(selected) => onSelectTool(selected)}
+                onSelectTag={onSelectTag}
               />
             ))}
           </div>
@@ -1189,6 +1302,24 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
           setIsLatencySettingsOpen(false);
         }}
       />
+
+      {/* TEMPORARY COPIED TOAST NOTIFICATION */}
+      {copiedDeepLink && (
+        <div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-3 bg-slate-950/95 border border-emerald-500/60 text-white px-4 py-3 rounded-xl shadow-2xl shadow-emerald-950/80 backdrop-blur-md font-mono text-xs pointer-events-none transition-all transform duration-300 animate-in fade-in slide-in-from-bottom-4 border-l-4 border-l-emerald-400">
+          <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/40">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+          </div>
+          <div>
+            <div className="font-bold text-emerald-300 flex items-center gap-2">
+              <span>Copied!</span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-sans font-medium">Deep-Link URL</span>
+            </div>
+            <p className="text-[11px] text-slate-300 font-sans mt-0.5">
+              Deep-link for <strong className="text-white">{tool.name}</strong> copied to clipboard.
+            </p>
+          </div>
+        </div>
+      )}
 
     </div>
   );

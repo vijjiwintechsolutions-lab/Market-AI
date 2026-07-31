@@ -28,7 +28,8 @@ import {
   Trash2,
   Link as LinkIcon,
   Activity,
-  ArrowUpRight
+  ArrowUpRight,
+  Share2
 } from 'lucide-react';
 import { AITool, ExecutionHistoryItem } from '../types';
 import { apiService } from '../services/apiService';
@@ -98,9 +99,18 @@ export const LiveToolRunnerModal: React.FC<LiveToolRunnerModalProps> = ({
   } | null>(null);
   const [isLatencySettingsOpen, setIsLatencySettingsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedDeepLink, setCopiedDeepLink] = useState(false);
   const [userRating, setUserRating] = useState<number>(0);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleShareDeepLink = () => {
+    if (!tool) return;
+    const deepLink = `${window.location.origin}${window.location.pathname}?tool=${encodeURIComponent(tool.id)}`;
+    navigator.clipboard.writeText(deepLink);
+    setCopiedDeepLink(true);
+    setTimeout(() => setCopiedDeepLink(false), 2000);
+  };
 
   const handleDirectDownloadMedia = async (mediaUrl: string | null, defaultFileName: string) => {
     if (!mediaUrl) return;
@@ -531,6 +541,27 @@ export const LiveToolRunnerModal: React.FC<LiveToolRunnerModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleShareDeepLink}
+              className={`px-2.5 py-1.5 border font-mono text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all duration-300 transform cursor-pointer ${
+                copiedDeepLink
+                  ? 'bg-emerald-500/30 border-emerald-400 text-emerald-200 shadow-lg shadow-emerald-500/30 scale-110 ring-2 ring-emerald-400/50'
+                  : 'bg-indigo-600/20 hover:bg-indigo-600/30 border-indigo-500/30 text-indigo-300 hover:scale-105 active:scale-95'
+              }`}
+              title="Copy Deep-Link URL to clipboard"
+            >
+              {copiedDeepLink ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400 scale-125 transition-transform" />
+                  <span className="hidden sm:inline">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="hidden sm:inline">Share Link</span>
+                </>
+              )}
+            </button>
             <button
               onClick={() => setIsLatencySettingsOpen(true)}
               className="px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-mono text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1016,14 +1047,32 @@ export const LiveToolRunnerModal: React.FC<LiveToolRunnerModalProps> = ({
         onClose={() => setIsLatencySettingsOpen(false)}
         onTriggerTestToast={(testThreshold) => {
           setLatencyToast({
-            provider: tool.provider || 'Google Gemini 1.5 Flash',
-            toolName: tool.name,
+            provider: tool?.provider || 'Google Gemini 1.5 Flash',
+            toolName: tool?.name || 'Tool',
             latencyMs: testThreshold + 850,
             thresholdMs: testThreshold,
           });
           setIsLatencySettingsOpen(false);
         }}
       />
+
+      {/* TEMPORARY COPIED TOAST NOTIFICATION */}
+      {copiedDeepLink && tool && (
+        <div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-3 bg-slate-950/95 border border-emerald-500/60 text-white px-4 py-3 rounded-xl shadow-2xl shadow-emerald-950/80 backdrop-blur-md font-mono text-xs pointer-events-none transition-all transform duration-300 animate-in fade-in slide-in-from-bottom-4 border-l-4 border-l-emerald-400">
+          <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/40">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+          </div>
+          <div>
+            <div className="font-bold text-emerald-300 flex items-center gap-2">
+              <span>Copied!</span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-sans font-medium">Deep-Link URL</span>
+            </div>
+            <p className="text-[11px] text-slate-300 font-sans mt-0.5">
+              Deep-link for <strong className="text-white">{tool.name}</strong> copied to clipboard.
+            </p>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -27,6 +27,8 @@ interface CategorySidebarProps {
   pricingFilter: string;
   setPricingFilter: (p: string) => void;
   favoriteCount: number;
+  onSelectTag?: (tag: string) => void;
+  searchQuery?: string;
 }
 
 export const CategorySidebar: React.FC<CategorySidebarProps> = ({
@@ -36,7 +38,22 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
   pricingFilter,
   setPricingFilter,
   favoriteCount,
+  onSelectTag,
+  searchQuery = '',
 }) => {
+  // Extract top popular tags from toolsList
+  const allTags = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    toolsList.forEach((t) => {
+      t.tags?.forEach((tag) => {
+        counts[tag] = (counts[tag] || 0) + 1;
+      });
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 16)
+      .map(([tag]) => tag);
+  }, [toolsList]);
   // Compute count of tools per category
   const categoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {
@@ -155,6 +172,39 @@ export const CategorySidebar: React.FC<CategorySidebarProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Popular Tags Live Filter Card */}
+      {allTags.length > 0 && (
+        <div className="bg-[#151517] border border-white/10 rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between pb-2 border-b border-white/10 text-[11px] font-bold text-indigo-400 uppercase tracking-wider font-mono">
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              Popular Live Tags
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1 pt-1 font-mono">
+            {allTags.map((tag) => {
+              const currentQ = searchQuery.toLowerCase().replace(/^#/, '');
+              const isSelected = currentQ === tag.toLowerCase();
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => onSelectTag?.(tag)}
+                  className={`text-[10px] px-2 py-0.5 rounded transition-all cursor-pointer border ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white border-indigo-400 font-bold shadow'
+                      : 'bg-indigo-500/10 text-indigo-300 hover:bg-indigo-600 hover:text-white border-indigo-500/20'
+                  }`}
+                  title={`Filter tools by #${tag}`}
+                >
+                  #{tag}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* SLA Metric Card */}
       <div className="bg-[#151517] border border-white/10 rounded-lg p-3 text-xs space-y-2">

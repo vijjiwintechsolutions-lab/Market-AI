@@ -11,15 +11,31 @@ import { UserDashboardTab } from './components/UserDashboardTab';
 import { CompareToolsModal } from './components/CompareToolsModal';
 import { SubmitToolModal } from './components/SubmitToolModal';
 import { LatencySettingsModal } from './components/LatencySettingsModal';
+import { PricingTiersModal } from './components/PricingTiersModal';
+import { AuthModal } from './components/AuthModal';
+import { AIConsultantWidget } from './components/AIConsultantWidget';
+import { NewToolsNotificationModal } from './components/NewToolsNotificationModal';
 import { Footer } from './components/Footer';
 
+import {
+  auth,
+  onAuthStateChanged,
+  User,
+  db,
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  getDocs,
+  addDoc,
+} from './lib/firebase';
 import { AITool, ExecutionHistoryItem, AIPromptItem } from './types';
 import { TOOLS_DATA } from './data/toolsData';
 import { Sparkles, Layers, SlidersHorizontal, Check, Zap, ArrowRight, Grid, List, FolderKanban, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function App() {
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'prompts' | 'history'>('marketplace');
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'providers' | 'prompts' | 'history'>('marketplace');
 
   // Tools Registry State
   const [toolsList, setToolsList] = useState<AITool[]>(TOOLS_DATA);
@@ -61,6 +77,116 @@ export default function App() {
 
   // Power User Latency Settings Modal
   const [isLatencySettingsOpen, setIsLatencySettingsOpen] = useState(false);
+
+  // Auth State & Firestore Sync
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        try {
+          // Sync User Profile & Credits from Firestore
+          const userRef = doc(db, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            if (data.credits !== undefined) {
+              setUserCredits(data.credits);
+            }
+          } else {
+            // Initialize User Document in Firestore
+            await setDoc(userRef, {
+              email: user.email,
+              displayName: user.displayName || '',
+              credits: 100,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        } catch (e) {
+          console.warn('Firestore user sync warning:', e);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch Community Tools from Firestore on Mount
+  useEffect(() => {
+    async function loadCommunityTools() {
+      try {
+        const toolsSnap = await getDocs(collection(db, 'community_tools'));
+        const communityTools: AITool[] = [];
+        toolsSnap.forEach((docSnap) => {
+          communityTools.push(docSnap.data() as AITool);
+        });
+        if (communityTools.length > 0) {
+          setToolsList((prev) => {
+            const existingIds = new Set(prev.map((t) => t.id));
+            const fresh = communityTools.filter((t) => !existingIds.has(t.id));
+            return [...fresh, ...prev];
+          });
+        }
+      } catch (e) {
+        console.warn('Firestore community tools sync warning:', e);
+      }
+    }
+    loadCommunityTools();
+  }, []);
+
+  // Handle URL deep linking (e.g. ?tool=ai-chat-pro)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const toolIdParam = params.get('tool') || params.get('toolId');
+      if (toolIdParam && toolsList.length > 0) {
+        const found = toolsList.find(
+          (t) => t.id.toLowerCase() === toolIdParam.toLowerCase()
+        );
+        if (found) {
+          setActiveToolRunner(found);
+          setActiveTab('marketplace');
+        }
+      }
+    } catch (e) {
+      console.warn('Deep link parsing error:', e);
+    }
+  }, [toolsList]);
+
+  // Pricing Tiers & Credit Management
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [userCredits, setUserCredits] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('market1_user_credits');
+      return saved ? parseInt(saved, 10) : 100;
+    } catch (e) {
+      return 100;
+    }
+  });
+
+  // New Tools Notification State
+  const [isNewToolsModalOpen, setIsNewToolsModalOpen] = useState(false);
+  const [unreadNewToolsCount, setUnreadNewToolsCount] = useState<number>(3);
+
+  // Sync user credits to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('market1_user_credits', userCredits.toString());
+    } catch (e) {}
+  }, [userCredits]);
+
+  const handleTopUpCredits = async (amount: number) => {
+    setUserCredits((prev) => {
+      const updated = prev + amount;
+      if (currentUser) {
+        setDoc(doc(db, 'users', currentUser.uid), { credits: updated }, { merge: true }).catch(
+          (err) => console.warn('Failed to update credits in Firestore:', err)
+        );
+      }
+      return updated;
+    });
+  };
 
   // View Mode: Tile View Grid vs High Density Table vs Category Sections
   const [viewMode, setViewMode] = useState<'table' | 'grid' | 'categories'>('grid');
@@ -117,8 +243,13 @@ export default function App() {
   };
 
   // Submit new tool handler
-  const handleNewToolSubmit = (newTool: AITool) => {
+  const handleNewToolSubmit = async (newTool: AITool) => {
     setToolsList((prev) => [newTool, ...prev]);
+    try {
+      await setDoc(doc(db, 'community_tools', newTool.id), newTool);
+    } catch (e) {
+      console.warn('Failed to save tool to Firestore:', e);
+    }
   };
 
   // Launch prompt inside recommended tool
@@ -134,6 +265,19 @@ export default function App() {
     setActiveToolRunner(updatedTool);
   };
 
+  // Live Tag Selection Handler
+  const handleSelectTag = (tag: string) => {
+    const cleanTag = tag.replace(/^#/, '');
+    setSearchQuery(cleanTag);
+    if (activeToolRunner) {
+      setActiveToolRunner(null);
+    }
+    if (activeTab !== 'marketplace') {
+      setActiveTab('marketplace');
+    }
+    window.scrollTo({ top: 320, behavior: 'smooth' });
+  };
+
   // Filtered Tools Computation
   const filteredTools = useMemo(() => {
     return toolsList.filter((tool) => {
@@ -144,14 +288,20 @@ export default function App() {
         pricingFilter === 'All' || tool.pricing.toLowerCase() === pricingFilter.toLowerCase();
 
       const q = searchQuery.toLowerCase().trim();
+      const cleanQ = q.startsWith('#') ? q.slice(1) : q;
       const matchesSearch =
         !q ||
         tool.name.toLowerCase().includes(q) ||
+        tool.name.toLowerCase().includes(cleanQ) ||
         tool.description.toLowerCase().includes(q) ||
+        tool.description.toLowerCase().includes(cleanQ) ||
         tool.category.toLowerCase().includes(q) ||
+        tool.category.toLowerCase().includes(cleanQ) ||
         tool.subcategory.toLowerCase().includes(q) ||
+        tool.subcategory.toLowerCase().includes(cleanQ) ||
         tool.provider.toLowerCase().includes(q) ||
-        tool.tags.some((tag) => tag.toLowerCase().includes(q));
+        tool.provider.toLowerCase().includes(cleanQ) ||
+        tool.tags.some((tag) => tag.toLowerCase().includes(q) || tag.toLowerCase().includes(cleanQ));
 
       return matchesCategory && matchesPricing && matchesSearch;
     }).sort((a, b) => {
@@ -207,6 +357,12 @@ export default function App() {
         setIsDarkMode={setIsDarkMode}
         totalToolsCount={toolsList.length}
         openLatencySettings={() => setIsLatencySettingsOpen(true)}
+        openPricingModal={() => setIsPricingModalOpen(true)}
+        userCredits={userCredits}
+        currentUser={currentUser}
+        openAuthModal={() => setIsAuthModalOpen(true)}
+        openNewToolsModal={() => setIsNewToolsModalOpen(true)}
+        unreadNewToolsCount={unreadNewToolsCount}
       />
 
       {/* Breadcrumb Navigation Bar */}
@@ -236,6 +392,7 @@ export default function App() {
             onToggleFavorite={toggleFavorite}
             comparedTools={comparedTools}
             onToggleCompare={toggleCompare}
+            onSelectTag={handleSelectTag}
           />
         ) : (
           <>
@@ -253,6 +410,7 @@ export default function App() {
                   sortBy={sortBy}
                   setSortBy={setSortBy}
                   totalFilteredCount={filteredTools.length}
+                  onSelectTag={handleSelectTag}
                 />
 
                 {/* Compared Tools Floating Sticky Bar */}
@@ -283,6 +441,8 @@ export default function App() {
                       pricingFilter={pricingFilter}
                       setPricingFilter={setPricingFilter}
                       favoriteCount={favoriteIds.length}
+                      onSelectTag={handleSelectTag}
+                      searchQuery={searchQuery}
                     />
 
                     {/* Right Tools Matrix Container */}
@@ -377,8 +537,8 @@ export default function App() {
                                 </button>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-                                {categoryTools.slice(0, 6).map((tool) => (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5">
+                                {categoryTools.slice(0, 8).map((tool) => (
                                   <ToolCard
                                     key={tool.id}
                                     tool={tool}
@@ -387,17 +547,18 @@ export default function App() {
                                     onToggleFavorite={toggleFavorite}
                                     isCompared={comparedTools.some((c) => c.id === tool.id)}
                                     onToggleCompare={toggleCompare}
+                                    onSelectTag={handleSelectTag}
                                   />
                                 ))}
                               </div>
 
-                              {categoryTools.length > 6 && (
+                              {categoryTools.length > 8 && (
                                 <div className="pt-2 text-center">
                                   <button
                                     onClick={() => setSelectedCategory(catName)}
                                     className="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer"
                                   >
-                                    + Show remaining {categoryTools.length - 6} tools in {catName}
+                                    + Show remaining {categoryTools.length - 8} tools in {catName}
                                   </button>
                                 </div>
                               )}
@@ -439,12 +600,23 @@ export default function App() {
                                           </span>
                                         )}
                                       </div>
-                                      <div className="text-[11px] text-slate-400 truncate font-sans flex items-center gap-2">
+                                      <div className="text-[11px] text-slate-400 truncate font-sans flex items-center gap-2 flex-wrap">
                                         <span>{tool.subcategory}</span>
                                         <span className="text-slate-600">•</span>
-                                        <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20 font-mono text-[10px]">
-                                          SLA Verified
-                                        </span>
+                                        {tool.tags.slice(0, 2).map((t) => (
+                                          <button
+                                            key={t}
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleSelectTag(t);
+                                            }}
+                                            className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/10 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/20 font-mono transition-colors cursor-pointer"
+                                            title={`Filter by #${t}`}
+                                          >
+                                            #{t}
+                                          </button>
+                                        ))}
                                       </div>
                                     </div>
                                   </div>
@@ -499,7 +671,7 @@ export default function App() {
                       ) : (
                         /* GRID CARDS VIEW */
                         <div className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5">
                             {paginatedTools.map((tool) => (
                               <ToolCard
                                 key={tool.id}
@@ -509,6 +681,7 @@ export default function App() {
                                 onToggleFavorite={toggleFavorite}
                                 isCompared={comparedTools.some((c) => c.id === tool.id)}
                                 onToggleCompare={toggleCompare}
+                                onSelectTag={handleSelectTag}
                               />
                             ))}
                           </div>
@@ -641,6 +814,44 @@ export default function App() {
       <LatencySettingsModal
         isOpen={isLatencySettingsOpen}
         onClose={() => setIsLatencySettingsOpen(false)}
+      />
+
+      {/* Tool Credit & Pricing Tiers Modal */}
+      <PricingTiersModal
+        isOpen={isPricingModalOpen}
+        onClose={() => setIsPricingModalOpen(false)}
+        userCredits={userCredits}
+        onTopUpCredits={handleTopUpCredits}
+      />
+
+      {/* Multi-Platform Firebase Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        currentUser={currentUser}
+        userCredits={userCredits}
+      />
+
+      {/* New Tools Notification Modal */}
+      <NewToolsNotificationModal
+        isOpen={isNewToolsModalOpen}
+        onClose={() => setIsNewToolsModalOpen(false)}
+        allTools={toolsList}
+        onSelectTool={(tool) => {
+          setActiveToolRunner(tool);
+          setActiveTab('marketplace');
+        }}
+        unreadCount={unreadNewToolsCount}
+        onMarkAllRead={() => setUnreadNewToolsCount(0)}
+      />
+
+      {/* Floating Interactive AI Consultant Chat Widget */}
+      <AIConsultantWidget
+        allTools={toolsList}
+        onSelectTool={(tool) => {
+          setActiveToolRunner(tool);
+          setActiveTab('marketplace');
+        }}
       />
 
       {/* Universal Footer */}
