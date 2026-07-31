@@ -1,16 +1,12 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "auth.market1.ai",
-  projectId: "gen-lang-client-0822690427",
-  storageBucket: "gen-lang-client-0822690427.firebasestorage.app",
-  messagingSenderId: "78560221268",
-  appId: "1:78560221268:web:5af32180da34d3ab67f5c1",
-};
-
-const app = initializeApp(firebaseConfig);
-
-export const auth = getAuth(app);
-export default app;
+{
+  "projectId": "gen-lang-client-0822690427",
+  "appId": "1:78560221268:web:5af32180da34d3ab67f5c1",
+  "apiKey": "AIzaSyBb5u7zpKriGD7jTaxbq3M59PkhH9gbtwo",
+  "authDomain": "gen-lang-client-0822690427.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-market1ai-2d38008a-3940-4ee1-86fb-b7c2c3d22087",
+  "storageBucket": "gen-lang-client-0822690427.firebasestorage.app",
+  "messagingSenderId": "78560221268",
+  "measurementId": "",
+  "oAuthClientId": "78560221268-v94hqaaqas6entech3eg0umm540c4fh7.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
+}
