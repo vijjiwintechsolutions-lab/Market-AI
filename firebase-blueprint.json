@@ -1,0 +1,33 @@
+{
+  "entities": {
+    "user_profiles": {
+      "title": "User Profiles",
+      "description": "User account profiles and metadata",
+      "properties": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "tool_executions": {
+      "title": "Tool Executions",
+      "description": "Saved AI tool execution history and results",
+      "properties": {
+        "userId": { "type": "string" },
+        "toolId": { "type": "string" },
+        "prompt": { "type": "string" },
+        "result": { "type": "string" },
+        "timestamp": { "type": "string" }
+      }
+    },
+    "user_favorites": {
+      "title": "User Favorites",
+      "description": "User bookmarked AI tools",
+      "properties": {
+        "userId": { "type": "string" },
+        "toolId": { "type": "string" },
+        "savedAt": { "type": "string" }
+      }
+    }
+  }
+}

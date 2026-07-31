@@ -1,0 +1,11 @@
+{
+  "name": "Market1 AI",
+  "description": "World\u0027s largest AI Tools Marketplace featuring curated categories, user ratings, real-time performance tracking, provider router, and live interactive AI studio tools.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
