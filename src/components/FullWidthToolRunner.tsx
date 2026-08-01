@@ -46,7 +46,6 @@ interface FullWidthToolRunnerProps {
   onToggleCompare: (tool: AITool) => void;
 }
 
-// Client-side Base64 Image Compressor helper to fit within Vercel Payload Limit (< 3.5MB)
 const compressImageBase64 = (dataUrl: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
   return new Promise((resolve) => {
     if (!dataUrl.startsWith('data:image/')) {
@@ -245,7 +244,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     dataUrlReader.onload = async () => {
       let resultStr = dataUrlReader.result as string;
 
-      // Auto compress image base64 if it's an image file
       if (file.type.startsWith('image/')) {
         resultStr = await compressImageBase64(resultStr, 1200, 0.7);
       }
