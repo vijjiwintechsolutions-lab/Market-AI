@@ -4,7 +4,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const startTime = Date.now();
 
-  // Enable CORS Headers
+  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -15,17 +15,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const url = req.url || '';
 
-  // System Health Check
+  // 1. Download Proxy Handler (Fixes "Failed - Unknown server error" on download)
+  if (url.includes('/api/download')) {
+    const requestUrl = new URL(req.url || '', `https://${req.headers.host || 'market-ai-bice.vercel.app'}`);
+    const targetUrl = requestUrl.searchParams.get('url');
+    const filename = requestUrl.searchParams.get('filename') || 'download-output.png';
+
+    if (!targetUrl) {
+      return res.status(400).json({ error: 'Missing target URL parameter' });
+    }
+
+    try {
+      const response = await fetch(targetUrl);
+      if (!response.ok) {
+        throw new Error(`Upstream fetch failed with status ${response.status}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      res.setHeader('Content-Type', response.headers.get('content-type') || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      return res.status(200).send(buffer);
+    } catch (error: any) {
+      console.error('Download Proxy Error:', error);
+      return res.status(500).json({ error: 'Failed to proxy download file', details: error.message });
+    }
+  }
+
+  // 2. Health Check Endpoint
   if (url.includes('/api/health')) {
     return res.status(200).json({
       status: 'ok',
       app: 'Market1 Multi-Model AI Marketplace',
-      version: '5.0.0-UltraHD-Engine',
+      version: '6.0.0-FullFix',
       timestamp: new Date().toISOString(),
       hasApiKey: Boolean(process.env.GEMINI_API_KEY),
     });
   }
 
+  // 3. AI Execution Router
   if (req.method === 'POST') {
     try {
       const body = req.body || {};
@@ -39,9 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const apiKey = process.env.GEMINI_API_KEY;
 
-      // ==========================================
-      // 1. TEXT / ANALYSIS ENGINE (Gemini + DeepSeek OS Router)
-      // ==========================================
+      // --- TEXT / ANALYSIS ENGINE ---
       if (url.includes('/api/ai/text') || url.includes('/api/ai/analyze')) {
         if (apiKey) {
           try {
@@ -59,7 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               modelUsed: 'gemini-2.5-flash',
             });
           } catch (e: any) {
-            console.error('Gemini API Fallback Triggered:', e);
+            console.error('Gemini API Fallback:', e);
           }
         }
 
@@ -72,9 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // ==========================================
-      // 2. ULTRA-HD IMAGE AI ENGINE (FLUX.1 Pro Realism & Precise Anatomy)
-      // ==========================================
+      // --- ULTRA-HD IMAGE ENGINE ---
       if (url.includes('/api/ai/image')) {
         const selectedRatio = aspectRatio || inputs?.aspectRatio || '1:1';
         const visualStyle = style || inputs?.style || 'Photorealistic 8K';
@@ -89,15 +113,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           height = 1280;
         }
 
-        // Strict Anatomy, Face Details & High Sharpness Modifiers
         const qualityPrefix = 'crisp 8k, award winning photography, sharp detailed human eyes, detailed facial features, accurate human anatomy, perfectly proportioned hands and body';
         const ultraPrompt = `${qualityPrefix}, ${rawPrompt}, ${visualStyle}, natural ambient lighting, 35mm lens, masterwork realism`;
         const encodedPrompt = encodeURIComponent(ultraPrompt);
         
-        // Dynamic seed prevents low-resolution server cached frames
         const randomSeed = Math.floor(Math.random() * 9000000) + 100000;
-
-        // FLUX.1 Realism Engine Direct Stream URL
         const fluxUltraUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=flux&nologo=true&enhance=true&seed=${randomSeed}`;
 
         return res.status(200).json({
@@ -111,9 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // ==========================================
-      // 3. AUDIO & VOICE AI ENGINE (Kokoro / Open TTS)
-      // ==========================================
+      // --- AUDIO & VOICE ENGINE ---
       if (url.includes('/api/ai/audio')) {
         const cleanText = encodeURIComponent(rawPrompt.slice(0, 300));
         const speechUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${cleanText}&tl=en&client=tw-ob`;
@@ -129,9 +147,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // ==========================================
-      // 4. MOTION VIDEO AI ENGINE (Wan 2.2 / LTX-Video Router)
-      // ==========================================
+      // --- MOTION VIDEO ENGINE ---
       if (url.includes('/api/ai/video')) {
         const videoStreamUrl = 'https://media.w3.org/2010/05/sintel/trailer.mp4';
         const posterSeed = Math.floor(Math.random() * 500000);
