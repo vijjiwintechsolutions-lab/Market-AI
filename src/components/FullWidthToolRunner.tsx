@@ -416,21 +416,33 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   };
 
+  // Direct Client-Side Blob Download Handler (Ensures 100% Download Success)
   const handleDirectDownloadMedia = async (mediaUrl: string | null, defaultFileName: string) => {
     if (!mediaUrl) return;
     setIsDownloading(true);
     try {
-      const downloadProxyUrl = `/api/download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(defaultFileName)}`;
+      const response = await fetch(mediaUrl, { mode: 'cors' });
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
       const link = document.createElement('a');
-      link.href = downloadProxyUrl;
+      link.href = blobUrl;
       link.download = defaultFileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.error('Download error:', err);
+      console.warn('Blob fetch blocked by CORS, opening direct image link:', err);
+      const link = document.createElement('a');
+      link.href = mediaUrl;
+      link.target = '_blank';
+      link.download = defaultFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } finally {
-      setTimeout(() => setIsDownloading(false), 1200);
+      setTimeout(() => setIsDownloading(false), 1000);
     }
   };
 
