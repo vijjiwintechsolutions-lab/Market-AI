@@ -46,6 +46,37 @@ interface FullWidthToolRunnerProps {
   onToggleCompare: (tool: AITool) => void;
 }
 
+// Client-side Base64 Image Compressor helper to fit within Vercel Payload Limit (< 3.5MB)
+const compressImageBase64 = (dataUrl: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
+  return new Promise((resolve) => {
+    if (!dataUrl.startsWith('data:image/')) {
+      return resolve(dataUrl);
+    }
+    const img = new Image();
+    img.src = dataUrl;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(dataUrl);
+
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressedDataUrl);
+    };
+    img.onerror = () => resolve(dataUrl);
+  });
+};
+
 export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   tool,
   allTools,
@@ -57,7 +88,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   comparedTools,
   onToggleCompare,
 }) => {
-  // Compute tool-specific relevant output formats and default
   const { availableFormats, defaultFormat } = useMemo(() => {
     const cat = tool.category;
     const outType = tool.outputType;
@@ -98,7 +128,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     };
   }, [tool]);
 
-  // Form input state
   const [inputValues, setInputValues] = useState<Record<string, any>>(() => {
     const initial: Record<string, any> = {};
     tool.inputs.forEach((param) => {
@@ -112,7 +141,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
 
-  // Execution States
   const [isRunning, setIsRunning] = useState(false);
   const [currentStep, setCurrentStep] = useState<string>('');
   const [outputResult, setOutputResult] = useState<string | null>(null);
@@ -145,7 +173,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset form when tool changes
   useEffect(() => {
     const initial: Record<string, any> = {};
     tool.inputs.forEach((param) => {
@@ -198,15 +225,15 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     const valRes = validateUploadedFile(file, tool);
     if (!valRes.valid) {
       setValidationToast({
         type: 'error',
-        title: 'Unsupported File Format or Size Constraint',
-        message: valRes.error || 'The uploaded file format is not supported.',
+        title: 'File Size Limit Exceeded',
+        message: valRes.error || 'The uploaded file exceeds size limits.',
       });
-      setErrorMsg(valRes.error || 'Unsupported file format');
+      setErrorMsg(valRes.error || 'File size limit exceeded');
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -215,8 +242,14 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     setUploadedFile(file);
 
     const dataUrlReader = new FileReader();
-    dataUrlReader.onload = () => {
-      const resultStr = dataUrlReader.result as string;
+    dataUrlReader.onload = async () => {
+      let resultStr = dataUrlReader.result as string;
+
+      // Auto compress image base64 if it's an image file
+      if (file.type.startsWith('image/')) {
+        resultStr = await compressImageBase64(resultStr, 1200, 0.7);
+      }
+
       setFilePreview(resultStr);
       handleInputChange('filePreview', resultStr);
       handleInputChange('file', resultStr);
@@ -369,7 +402,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Server connection error');
-    } fontally: {
+    } finally {
       clearInterval(progressInterval);
       clearInterval(timerInterval);
       setIsRunning(false);
@@ -425,7 +458,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#E0E0E0] pb-12 font-sans">
-      {/* Top Header Navigation */}
       <div className="bg-[#151517] border-b border-white/10 sticky top-0 z-30 px-4 sm:px-6 lg:px-8 py-3.5">
         <div className="w-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -452,9 +484,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
         </div>
       </div>
 
-      {/* Main Workspace */}
       <div className="w-full px-4 sm:px-6 lg:px-8 pt-6 space-y-8">
-        {/* Tool Banner */}
         <div className="bg-[#151517] border border-white/10 rounded-lg p-5 sm:p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
             <div className="flex items-center gap-2 flex-wrap">
@@ -509,9 +539,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
           </div>
         </div>
 
-        {/* 2-Column Execution Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* LEFT: Parameters & Form (5 cols) */}
           <div className="lg:col-span-5 bg-[#151517] border border-white/10 rounded-lg p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-white/10 gap-2 flex-wrap">
               <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-indigo-400">
@@ -611,13 +639,12 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               ))}
             </div>
 
-            {/* File & Attachment Panel */}
             <div className="pt-3 border-t border-white/10 space-y-3">
               <div className="flex items-center justify-between text-[11px] font-mono font-bold text-slate-300">
                 <span className="flex items-center gap-1.5 text-indigo-400">
                   <Paperclip className="w-3.5 h-3.5" /> Source File / Media Attachment
                 </span>
-                <span className="text-[10px] text-slate-500">PDF, DOCX, TXT, PNG, MP3, MP4</span>
+                <span className="text-[10px] text-slate-500">Max Size: 3.5 MB</span>
               </div>
 
               {!uploadedFile ? (
@@ -629,7 +656,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 >
                   <UploadCloud className="w-5 h-5 text-indigo-400 mx-auto mb-1 group-hover:scale-110 transition-transform" />
                   <p className="text-xs text-slate-300 font-mono font-medium">Click to browse or Drag & Drop file</p>
-                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">Supports Documents, Images, Audio & Video</p>
+                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">Images auto-compressed to fit server limit</p>
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -656,7 +683,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* Source Web Link */}
               <div className="space-y-1">
                 <label className="block text-[11px] font-bold text-slate-300 font-mono flex items-center gap-1.5">
                   <Globe className="w-3.5 h-3.5 text-indigo-400" />
@@ -671,7 +697,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 />
               </div>
 
-              {/* Output Format & Language Selection */}
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <div className="space-y-1">
                   <label className="block text-[10px] font-bold text-slate-400 font-mono">Output Format</label>
@@ -708,7 +733,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               </div>
             </div>
 
-            {/* Execute CTA */}
             <button
               onClick={handleExecute}
               disabled={isRunning}
@@ -747,7 +771,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
             )}
           </div>
 
-          {/* RIGHT: Fixed & Stable Live Output Preview Panel (7 cols) */}
           <div className="lg:col-span-7 bg-[#151517] border border-white/10 rounded-lg p-5 flex flex-col justify-between min-h-[520px] h-full">
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
@@ -772,7 +795,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* Progress & Processing State */}
               {isRunning && (
                 <AIProcessingState
                   tool={tool}
@@ -785,7 +807,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 />
               )}
 
-              {/* Video Player Output */}
               {videoUrlResult && (
                 <AIVideoPlayer
                   videoUrl={videoMp4Url || videoUrlResult || '/api/video-stream'}
@@ -797,7 +818,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 />
               )}
 
-              {/* Image Output */}
               {imageUrlResult && (
                 <div className="space-y-4">
                   <div className="relative rounded border border-white/10 shadow-2xl bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:12px_12px] bg-[#0A0A0A] overflow-hidden p-3 min-h-[300px] flex items-center justify-center">
@@ -819,7 +839,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* Audio Output */}
               {audioUrlResult && (
                 <div className="space-y-3 p-4 bg-[#0A0A0A] border border-white/10 rounded text-center font-mono">
                   <Volume2 className="w-8 h-8 text-indigo-400 mx-auto" />
@@ -834,7 +853,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* Text / Markdown Output */}
               {outputResult && (
                 <div className="space-y-3">
                   <div className="relative bg-[#0A0A0A] border border-white/10 rounded p-4 text-xs text-slate-200 font-mono whitespace-pre-wrap max-h-[400px] min-h-[220px] overflow-y-auto leading-relaxed shadow-inner">
@@ -860,7 +878,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               )}
             </div>
 
-            {/* Rating Box at Bottom */}
             <div className="mt-8 pt-4 border-t border-white/10 text-xs font-mono">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Rate this tool execution SLA:</span>
@@ -889,7 +906,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
           </div>
         </div>
 
-        {/* Related Tools */}
         <div className="pt-8 border-t border-white/10 space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -924,15 +940,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       <LatencySettingsModal
         isOpen={isLatencySettingsOpen}
         onClose={() => setIsLatencySettingsOpen(false)}
-        onTriggerTestToast={(testThreshold) => {
-          setLatencyToast({
-            provider: tool.provider || 'AI Provider Router',
-            toolName: tool.name,
-            latencyMs: testThreshold + 950,
-            thresholdMs: testThreshold,
-          });
-          setIsLatencySettingsOpen(false);
-        }}
       />
     </div>
   );
