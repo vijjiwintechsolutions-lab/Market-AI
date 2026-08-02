@@ -44,7 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       status: 'ok',
       app: 'Neural Market AI Engine',
-      version: '12.0.0-CleanImageFix',
+      version: '13.0.0-CleanImageFix',
       timestamp: new Date().toISOString(),
       hasApiKey: Boolean(process.env.GEMINI_API_KEY),
     });
@@ -60,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         inputs?.prompt ||
         inputs?.topic ||
         inputs?.text ||
-        'Aadi Festival Shopping Banner with discounts and golden decor';
+        'Beautiful festival shopping ad poster banner with bright golden lighting';
 
       const apiKey = process.env.GEMINI_API_KEY;
 
@@ -93,7 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // --- RELIABLE ULTRA-HD IMAGE GENERATOR ENGINE ---
+      // --- ULTRA RELIABLE IMAGE GENERATOR ENGINE ---
       if (url.includes('/api/ai/image')) {
         const selectedRatio = aspectRatio || inputs?.aspectRatio || '1:1';
         let width = 1024;
@@ -106,20 +106,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           height = 1280;
         }
 
-        // Clean natural prompt structure
-        const cleanPrompt = encodeURIComponent(`cinematic photo of ${rawPrompt}, 8k resolution, ultra detailed, bright vibrant lighting`);
+        // Clean Special Characters for Strict Safe URL Encoding
+        const safePromptString = String(rawPrompt)
+          .replace(/[#?&/]/g, ' ')
+          .trim();
+
+        const cleanPrompt = encodeURIComponent(`high quality realistic cinematic photograph of ${safePromptString}, 8k resolution, detailed lighting`);
         const randomSeed = Math.floor(Math.random() * 899999) + 100000;
         
-        // Fast primary Pollinations image render URL
+        // Dynamic image server endpoint with logo disabled and forced seed
         const imageOutputUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&model=flux&nologo=true&seed=${randomSeed}`;
 
         return res.status(200).json({
           success: true,
           output: imageOutputUrl,
           imageUrl: imageOutputUrl,
-          textOutput: `Generated Image Output for: "${rawPrompt}"`,
+          textOutput: `Generated Image Output for: "${safePromptString}"`,
           executionTimeMs: Date.now() - startTime,
-          provider: 'FLUX.1 Ultra Realism Engine',
+          provider: 'FLUX.1 Realism Engine',
           modelUsed: 'flux-1-schnell-hd',
         });
       }
