@@ -1,246 +1,299 @@
-import React, { useState, useMemo } from 'react';
-import { INITIAL_TOOLS, CATEGORIES_LIST } from './data/toolsData';
-import { AITool, ExecutionHistoryItem } from './types';
-import { FullWidthToolRunner } from './components/FullWidthToolRunner';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Header } from './components/Header';
+import { BreadcrumbBar } from './components/BreadcrumbBar';
+import { HeroSection } from './components/HeroSection';
+import { CategorySidebar } from './components/CategorySidebar';
 import { ToolCard } from './components/ToolCard';
+import { FullWidthToolRunner } from './components/FullWidthToolRunner';
+import { ProviderRouterTab } from './components/ProviderRouterTab';
+import { PromptLibraryTab } from './components/PromptLibraryTab';
+import { UserDashboardTab } from './components/UserDashboardTab';
+import { CompareToolsModal } from './components/CompareToolsModal';
+import { SubmitToolModal } from './components/SubmitToolModal';
+import { LatencySettingsModal } from './components/LatencySettingsModal';
 import { RealWalletModal } from './components/RealWalletModal';
-import { 
-  Sparkles, 
-  Search, 
-  Zap, 
-  CreditCard, 
-  Bookmark, 
-  Compass,
-  SlidersHorizontal,
-  Grid
-} from 'lucide-react';
+import { Footer } from './components/Footer';
+import { AITool, ExecutionHistoryItem, AIPromptItem } from './types';
+import { TOOLS_DATA } from './data/toolsData';
+import { Sparkles, Grid, List, FolderKanban } from 'lucide-react';
 
 export default function App() {
-  const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'prompts' | 'history'>('marketplace');
+  const [toolsList, setToolsList] = useState<AITool[]>(TOOLS_DATA);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All Categories');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
-  const [comparedTools, setComparedTools] = useState<AITool[]>([]);
+  const [pricingFilter, setPricingFilter] = useState<string>('All');
+  const [sortBy, setSortBy] = useState<string>('featured');
+
+  const [activeToolRunner, setActiveToolRunner] = useState<AITool | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(100);
   const [isWalletOpen, setIsWalletOpen] = useState<boolean>(false);
-  const [showSavedOnly, setShowSavedOnly] = useState<boolean>(false);
-  const [, setExecutionHistory] = useState<ExecutionHistoryItem[]>([]);
+
+  const [favoriteIds, setFavoritesIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('market1_favorites');
+      return saved ? JSON.parse(saved) : ['ai-family-portrait-studio', 'regional-ad-banner-maker'];
+    } catch (e) {
+      return ['ai-family-portrait-studio', 'regional-ad-banner-maker'];
+    }
+  });
+
+  const [historyItems, setHistoryItems] = useState<ExecutionHistoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('market1_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [comparedTools, setComparedTools] = useState<AITool[]>([]);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [isLatencySettingsOpen, setIsLatencySettingsOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'categories'>('grid');
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('market1_favorites', JSON.stringify(favoriteIds));
+    } catch (e) {}
+  }, [favoriteIds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('market1_history', JSON.stringify(historyItems));
+    } catch (e) {}
+  }, [historyItems]);
+
+  const toggleFavorite = (toolId: string) => {
+    setFavoritesIds((prev) =>
+      prev.includes(toolId) ? prev.filter((id) => id !== toolId) : [...prev, toolId]
+    );
+  };
+
+  const toggleCompare = (tool: AITool) => {
+    setComparedTools((prev) => {
+      const exists = prev.some((t) => t.id === tool.id);
+      if (exists) return prev.filter((t) => t.id !== tool.id);
+      if (prev.length >= 3) {
+        alert('You can compare a maximum of 3 AI tools.');
+        return prev;
+      }
+      return [...prev, tool];
+    });
+  };
+
+  const handleSaveHistory = (newItem: ExecutionHistoryItem) => {
+    setHistoryItems((prev) => [newItem, ...prev]);
+  };
+
+  const handleNewToolSubmit = (newTool: AITool) => {
+    setToolsList((prev) => [newTool, ...prev]);
+  };
+
+  const handleRunPromptInTool = (promptItem: AIPromptItem) => {
+    const target = toolsList.find((t) => t.id === promptItem.recommendedToolId) || toolsList[0];
+    const updatedTool = {
+      ...target,
+      inputs: target.inputs.map((inp) =>
+        inp.id === 'prompt' || inp.type === 'textarea' ? { ...inp, defaultValue: promptItem.promptText } : inp
+      ),
+    };
+    setActiveToolRunner(updatedTool);
+  };
+
+  const handleSelectTag = (tag: string) => {
+    const cleanTag = tag.replace(/^#/, '');
+    setSearchQuery(cleanTag);
+    if (activeToolRunner) setActiveToolRunner(null);
+    if (activeTab !== 'marketplace') setActiveTab('marketplace');
+  };
 
   const filteredTools = useMemo(() => {
-    return INITIAL_TOOLS.filter((tool) => {
-      const matchesCategory = selectedCategory === 'All' || tool.category === selectedCategory;
+    return toolsList.filter((tool) => {
+      const matchesCategory = selectedCategory === 'All Categories' || tool.category === selectedCategory;
+      const matchesPricing = pricingFilter === 'All' || tool.pricing.toLowerCase() === pricingFilter.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
+      const cleanQ = q.startsWith('#') ? q.slice(1) : q;
       const matchesSearch =
-        tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tool.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tool.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesSaved = !showSavedOnly || favoriteIds.includes(tool.id);
-      return matchesCategory && matchesSearch && matchesSaved;
+        !q ||
+        tool.name.toLowerCase().includes(q) ||
+        tool.name.toLowerCase().includes(cleanQ) ||
+        tool.description.toLowerCase().includes(q) ||
+        tool.category.toLowerCase().includes(q) ||
+        tool.subcategory.toLowerCase().includes(q) ||
+        (tool.tags && tool.tags.some((tag) => tag.toLowerCase().includes(q) || tag.toLowerCase().includes(cleanQ)));
+      return matchesCategory && matchesPricing && matchesSearch;
     });
-  }, [selectedCategory, searchQuery, showSavedOnly, favoriteIds]);
+  }, [toolsList, selectedCategory, searchQuery, pricingFilter]);
 
-  const handleToggleFavorite = (id: string) => {
-    setFavoriteIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  const handleToggleCompare = (tool: AITool) => {
-    setComparedTools((prev) =>
-      prev.some((t) => t.id === tool.id)
-        ? prev.filter((t) => t.id !== tool.id)
-        : [...prev, tool]
-    );
-  };
-
-  const handleSaveHistory = (item: ExecutionHistoryItem) => {
-    setExecutionHistory((prev) => [item, ...prev]);
-  };
+  const favoritesList = useMemo(() => {
+    return toolsList.filter((t) => favoriteIds.includes(t.id));
+  }, [toolsList, favoriteIds]);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-[#E0E0E0] font-sans flex flex-col">
-      {/* ORIGINAL HEADER */}
-      <header className="bg-[#151517] border-b border-white/10 sticky top-0 z-40 px-4 sm:px-6 py-3.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div
-            onClick={() => {
-              setSelectedTool(null);
-              setShowSavedOnly(false);
-            }}
-            className="flex items-center gap-2.5 cursor-pointer"
-          >
-            <div className="p-2 bg-indigo-600 rounded-xl shadow-lg">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="text-lg font-extrabold text-white font-mono tracking-tight">NEURAL MARKET</span>
-              <span className="text-[10px] text-indigo-400 font-mono block -mt-1 font-bold">v4.0 Enterprise AI</span>
-            </div>
-          </div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+      {/* Header */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        favoritesCount={favoriteIds.length}
+        openSubmitModal={() => setIsSubmitModalOpen(true)}
+        isDarkMode={isDarkMode}
+        setIsDarkMode={setIsDarkMode}
+        totalToolsCount={toolsList.length}
+        openLatencySettings={() => setIsLatencySettingsOpen(true)}
+      />
 
-          <div className="flex items-center gap-3 font-mono">
-            <button
-              onClick={() => setShowSavedOnly(!showSavedOnly)}
-              className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
-                showSavedOnly
-                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                  : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
-              }`}
-            >
-              <Bookmark className={`w-4 h-4 ${showSavedOnly ? 'fill-rose-300' : ''}`} />
-              <span className="hidden sm:inline">Saved ({favoriteIds.length})</span>
-            </button>
+      {/* Breadcrumb Bar */}
+      <BreadcrumbBar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        activeToolRunner={activeToolRunner}
+        setActiveToolRunner={setActiveToolRunner}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
 
-            <button
-              onClick={() => setIsWalletOpen(true)}
-              className="px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-lg text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
-            >
-              <Zap className="w-4 h-4 fill-amber-400 text-amber-400" />
-              <span>Wallet: {walletBalance} Crs</span>
-              <CreditCard className="w-3.5 h-3.5 text-slate-400" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* WORKSPACE ROUTER */}
-      {selectedTool ? (
-        <FullWidthToolRunner
-          tool={selectedTool}
-          allTools={INITIAL_TOOLS}
-          onBack={() => setSelectedTool(null)}
-          onSelectTool={(t) => setSelectedTool(t)}
-          onSaveHistory={handleSaveHistory}
-          favoriteIds={favoriteIds}
-          onToggleFavorite={handleToggleFavorite}
-          comparedTools={comparedTools}
-          onToggleCompare={handleToggleCompare}
-        />
-      ) : (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* ORIGINAL SIDEBAR NAVIGATION */}
-          <aside className="lg:col-span-3 bg-[#151517] border border-white/10 rounded-2xl p-5 space-y-6 sticky top-20 shadow-xl font-mono">
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
-                <Compass className="w-4 h-4" /> AI Categories
-              </h2>
-              <div className="mt-3 space-y-1 text-xs">
-                <button
-                  onClick={() => {
-                    setSelectedCategory('All');
-                    setShowSavedOnly(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded-lg font-bold flex items-center justify-between cursor-pointer transition-colors ${
-                    selectedCategory === 'All' && !showSavedOnly
-                      ? 'bg-indigo-600 text-white shadow'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  <span>All Tools</span>
-                  <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded">{INITIAL_TOOLS.length}</span>
-                </button>
-
-                {CATEGORIES_LIST.map((cat) => {
-                  const count = INITIAL_TOOLS.filter((t) => t.category === cat).length;
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        setSelectedCategory(cat);
-                        setShowSavedOnly(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg font-bold flex items-center justify-between cursor-pointer transition-colors ${
-                        selectedCategory === cat && !showSavedOnly
-                          ? 'bg-indigo-600 text-white shadow'
-                          : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      <span className="truncate">{cat}</span>
-                      <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded shrink-0">{count}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-white/10 space-y-3 text-xs text-slate-400">
-              <div className="flex items-center justify-between">
-                <span>Total Active Tools:</span>
-                <strong className="text-white">{INITIAL_TOOLS.length}</strong>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Platform SLA:</span>
-                <strong className="text-green-400">99.9% Uptime</strong>
-              </div>
-            </div>
-          </aside>
-
-          {/* MAIN CONTENT AREA */}
-          <main className="lg:col-span-9 space-y-6">
-            {/* HERO BANNER & SEARCH */}
-            <div className="bg-[#151517] border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5 font-mono">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-3 py-1 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-[11px] font-bold rounded-full uppercase">
-                  Enterprise AI Engine
-                </span>
-                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold rounded-full uppercase">
-                  Multi-Language Ready
-                </span>
-              </div>
+      {/* Main Content Router */}
+      <main className="flex-1">
+        {activeToolRunner ? (
+          <FullWidthToolRunner
+            tool={activeToolRunner}
+            allTools={toolsList}
+            onBack={() => setActiveToolRunner(null)}
+            onSelectTool={(t) => setActiveToolRunner(t)}
+            onSaveHistory={handleSaveHistory}
+            favoriteIds={favoriteIds}
+            onToggleFavorite={toggleFavorite}
+            comparedTools={comparedTools}
+            onToggleCompare={toggleCompare}
+            onSelectTag={handleSelectTag}
+          />
+        ) : (
+          <>
+            {activeTab === 'marketplace' && (
               <div>
-                <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-                  AI Generation & Creation Hub
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed font-sans">
-                  Generate realistic family photo shoots, festival ad banners, viral dance trends, baby photos, and complete websites in any language.
-                </p>
-              </div>
-
-              {/* SEARCH BAR */}
-              <div className="relative">
-                <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search tools (e.g., 'Family Studio', 'Banner Generator', 'Dance Reel')..."
-                  className="w-full pl-12 pr-4 py-3 bg-[#0A0A0A] border border-white/15 rounded-xl text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none shadow-inner"
+                <HeroSection
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={setSelectedCategory}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  pricingFilter={pricingFilter}
+                  setPricingFilter={setPricingFilter}
+                  sortBy={sortBy}
+                  setSortBy={setSortBy}
+                  totalFilteredCount={filteredTools.length}
+                  onSelectTag={handleSelectTag}
                 />
+
+                <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+                  <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Left Category Sidebar */}
+                    <CategorySidebar
+                      selectedCategory={selectedCategory}
+                      setSelectedCategory={setSelectedCategory}
+                      toolsList={toolsList}
+                      pricingFilter={pricingFilter}
+                      setPricingFilter={setPricingFilter}
+                      favoriteCount={favoriteIds.length}
+                      onSelectTag={handleSelectTag}
+                      searchQuery={searchQuery}
+                    />
+
+                    {/* Right Tools Grid */}
+                    <div className="flex-1 min-w-0 space-y-4">
+                      <div className="flex items-center justify-between text-xs text-slate-400 border-b border-white/10 pb-3">
+                        <span className="font-bold text-white uppercase font-mono">
+                          Showing {filteredTools.length} AI Tools
+                        </span>
+                        <div className="flex items-center bg-[#151517] border border-white/10 rounded p-0.5 font-mono">
+                          <button
+                            onClick={() => setViewMode('grid')}
+                            className={`px-2.5 py-1 rounded text-[11px] font-bold ${
+                              viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400'
+                            }`}
+                          >
+                            <Grid className="w-3.5 h-3.5 inline mr-1" /> Grid
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredTools.map((tool) => (
+                          <ToolCard
+                            key={tool.id}
+                            tool={tool}
+                            onRunTool={(t) => setActiveToolRunner(t)}
+                            isFavorite={favoriteIds.includes(tool.id)}
+                            onToggleFavorite={toggleFavorite}
+                            isCompared={comparedTools.some((c) => c.id === tool.id)}
+                            onToggleCompare={toggleCompare}
+                            onSelectTag={handleSelectTag}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* RESULTS COUNTER */}
-            <div className="flex items-center justify-between font-mono text-xs pt-2">
-              <span className="text-slate-400">
-                Showing <strong className="text-white">{filteredTools.length}</strong> AI Tools
-              </span>
-              <span className="text-indigo-400 font-bold">Category: {selectedCategory}</span>
-            </div>
+            {activeTab === 'prompts' && (
+              <PromptLibraryTab onRunPromptInTool={handleRunPromptInTool} />
+            )}
 
-            {/* ORIGINAL CLEAN TOOLS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredTools.map((tool) => (
-                <ToolCard
-                  key={tool.id}
-                  tool={tool}
-                  isFavorite={favoriteIds.includes(tool.id)}
-                  isCompared={comparedTools.some((t) => t.id === tool.id)}
-                  onToggleFavorite={handleToggleFavorite}
-                  onToggleCompare={handleToggleCompare}
-                  onRunTool={(t) => setSelectedTool(t)}
-                />
-              ))}
-            </div>
-          </main>
-        </div>
+            {activeTab === 'history' && (
+              <UserDashboardTab
+                favorites={favoritesList}
+                history={historyItems}
+                onRunTool={(t) => setActiveToolRunner(t)}
+                onRemoveFavorite={toggleFavorite}
+                onClearHistory={() => setHistoryItems([])}
+              />
+            )}
+          </>
+        )}
+      </main>
+
+      {/* Compare Modal */}
+      {isCompareOpen && (
+        <CompareToolsModal
+          comparedTools={comparedTools}
+          onRemoveTool={(id) => setComparedTools((prev) => prev.filter((t) => t.id !== id))}
+          onClearAll={() => setComparedTools([])}
+          onClose={() => setIsCompareOpen(false)}
+          onRunTool={(t) => setActiveToolRunner(t)}
+        />
       )}
 
-      {/* REAL WALLET MODAL */}
+      {/* Submit Tool Modal */}
+      <SubmitToolModal
+        isOpen={isSubmitModalOpen}
+        onClose={() => setIsSubmitModalOpen(false)}
+        onSubmitSuccess={handleNewToolSubmit}
+      />
+
+      {/* Latency Modal */}
+      <LatencySettingsModal
+        isOpen={isLatencySettingsOpen}
+        onClose={() => setIsLatencySettingsOpen(false)}
+      />
+
+      {/* Real Wallet Checkout Modal */}
       <RealWalletModal
         isOpen={isWalletOpen}
         onClose={() => setIsWalletOpen(false)}
         currentBalance={walletBalance}
         onBalanceUpdated={(newBal) => setWalletBalance(newBal)}
       />
+
+      <Footer />
     </div>
   );
 }
