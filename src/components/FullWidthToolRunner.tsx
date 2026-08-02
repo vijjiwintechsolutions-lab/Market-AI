@@ -46,11 +46,21 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   const isVideoTool = tool.outputType === 'video' || tool.category?.toLowerCase().includes('video');
   const isAudioTool = tool.outputType === 'audio' || tool.category?.toLowerCase().includes('audio') || tool.category?.toLowerCase().includes('voice');
 
+  const formatOptions = isImageTool 
+    ? ['PNG Image (.png)', 'JPG Photo (.jpg)', 'WEBP Format (.webp)']
+    : isVideoTool 
+    ? ['MP4 Video (.mp4)', 'WEBM Video (.webm)', 'GIF Animation (.gif)']
+    : isAudioTool
+    ? ['MP3 Audio (.mp3)', 'WAV Audio (.wav)']
+    : ['Markdown (.md)', 'Structured JSON (.json)', 'Plain Text (.txt)'];
+
   const [inputValues, setInputValues] = useState<Record<string, any>>(() => {
     const initial: Record<string, any> = {};
     tool.inputs.forEach((param) => {
       initial[param.id] = param.defaultValue !== undefined ? param.defaultValue : '';
     });
+    initial['outputFormat'] = formatOptions[0];
+    initial['quality'] = '8K Ultra HD / Studio';
     return initial;
   });
 
@@ -74,6 +84,8 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     tool.inputs.forEach((param) => {
       initial[param.id] = param.defaultValue !== undefined ? param.defaultValue : '';
     });
+    initial['outputFormat'] = formatOptions[0];
+    initial['quality'] = '8K Ultra HD / Studio';
     setInputValues(initial);
     setOutputResult(null);
     setImageUrlResult(null);
@@ -139,9 +151,22 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   };
 
-  const handleDirectDownloadMedia = async (mediaUrl: string | null, filename: string) => {
+  const handleDirectDownloadMedia = async (mediaUrl: string | null) => {
     if (!mediaUrl) return;
     setIsDownloading(true);
+    
+    // Extract file extension based on user format choice
+    const selectedFormat = inputValues['outputFormat'] || '';
+    let ext = 'png';
+    if (selectedFormat.includes('.jpg')) ext = 'jpg';
+    else if (selectedFormat.includes('.webp')) ext = 'webp';
+    else if (selectedFormat.includes('.mp4')) ext = 'mp4';
+    else if (selectedFormat.includes('.webm')) ext = 'webm';
+    else if (selectedFormat.includes('.mp3')) ext = 'mp3';
+    else if (selectedFormat.includes('.wav')) ext = 'wav';
+
+    const filename = `${tool.id}-output.${ext}`;
+
     try {
       const res = await fetch(mediaUrl);
       const blob = await res.blob();
@@ -233,6 +258,35 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               )}
             </div>
 
+            {/* DOWNLOAD FORMAT & RENDER QUALITY OPTIONS */}
+            <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/10">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 block">Download Format</label>
+                <select
+                  value={inputValues['outputFormat']}
+                  onChange={(e) => handleInputChange('outputFormat', e.target.value)}
+                  className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500 font-mono cursor-pointer"
+                >
+                  {formatOptions.map((fmt) => (
+                    <option key={fmt} value={fmt}>{fmt}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 block">Quality Preset</label>
+                <select
+                  value={inputValues['quality']}
+                  onChange={(e) => handleInputChange('quality', e.target.value)}
+                  className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500 font-mono cursor-pointer"
+                >
+                  <option value="8K Ultra HD / Studio">8K Ultra HD / Studio</option>
+                  <option value="4K High Precision">4K High Precision</option>
+                  <option value="Standard Fast">Standard Fast</option>
+                </select>
+              </div>
+            </div>
+
             <button onClick={handleExecute} disabled={isRunning} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 cursor-pointer mt-4">
               {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-white" />}
               <span>{isRunning ? 'Synthesizing Request...' : 'Execute AI Tool'}</span>
@@ -255,9 +309,9 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                   <div className="rounded border border-white/10 bg-[#0A0A0A] p-2 flex items-center justify-center min-h-[320px]">
                     <img src={imageUrlResult} alt="Generated Artwork" className="w-full h-auto max-h-[440px] object-contain rounded" />
                   </div>
-                  <button onClick={() => handleDirectDownloadMedia(imageUrlResult, `${tool.id}-artwork.png`)} disabled={isDownloading} className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase rounded shadow flex items-center justify-center gap-2 cursor-pointer">
+                  <button onClick={() => handleDirectDownloadMedia(imageUrlResult)} disabled={isDownloading} className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase rounded shadow flex items-center justify-center gap-2 cursor-pointer">
                     {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                    <span>{isDownloading ? 'Downloading...' : 'Direct Download Ultra-HD Image'}</span>
+                    <span>{isDownloading ? 'Downloading...' : `Download ${inputValues['outputFormat'] || 'Media'}`}</span>
                   </button>
                 </div>
               )}
@@ -270,7 +324,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                   promptText={inputValues.prompt || tool.name}
                   durationSec={15}
                   toolName={tool.name}
-                  onDownload={() => handleDirectDownloadMedia(videoUrlResult, `${tool.id}-motion-video.mp4`)}
+                  onDownload={() => handleDirectDownloadMedia(videoUrlResult)}
                 />
               )}
 
@@ -279,8 +333,8 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 <div className="space-y-3 p-4 bg-[#0A0A0A] border border-white/10 rounded text-center">
                   <Volume2 className="w-8 h-8 text-indigo-400 mx-auto" />
                   <audio controls src={audioUrlResult} className="w-full" autoPlay />
-                  <button onClick={() => handleDirectDownloadMedia(audioUrlResult, `${tool.id}-audio.mp3`)} className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 cursor-pointer">
-                    <Download className="w-4 h-4" /> Direct Download Audio MP3
+                  <button onClick={() => handleDirectDownloadMedia(audioUrlResult)} className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 cursor-pointer">
+                    <Download className="w-4 h-4" /> Download Audio
                   </button>
                 </div>
               )}
