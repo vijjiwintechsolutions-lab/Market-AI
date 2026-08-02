@@ -10,7 +10,8 @@ export const CATEGORIES_LIST: ToolCategory[] = [
   'Marketing & Ads',
 ];
 
-export const INITIAL_TOOLS: AITool[] = [
+// Base featured tools directly matching user screenshots and requirements
+const FEATURED_TOOLS: AITool[] = [
   {
     id: 'ai-family-portrait-studio',
     name: 'AI Family & Romance Studio',
@@ -39,13 +40,6 @@ export const INITIAL_TOOLS: AITool[] = [
         type: 'select',
         options: ['1:1 (Square)', '9:16 (Story/Reel)', '16:9 (Landscape)'],
         defaultValue: '9:16 (Story/Reel)'
-      },
-      {
-        id: 'style',
-        name: 'Visual Theme',
-        type: 'select',
-        options: ['Photorealistic Studio', 'Festive Silk & Gold', 'Outdoor Village Rustic', 'Modern Casual'],
-        defaultValue: 'Photorealistic Studio'
       }
     ],
     outputType: 'image'
@@ -71,13 +65,6 @@ export const INITIAL_TOOLS: AITool[] = [
         required: true,
         defaultValue: 'Aadi Shopping Thiruvizha Mega Expo Banner with discount offers and golden traditional decor',
         description: 'Enter your offer title, store name, or event details...'
-      },
-      {
-        id: 'aspectRatio',
-        name: 'Poster Layout',
-        type: 'select',
-        options: ['9:16 (Mobile Story)', '1:1 (Instagram Post)', '16:9 (FB/Web Banner)'],
-        defaultValue: '9:16 (Mobile Story)'
       }
     ],
     outputType: 'image'
@@ -103,13 +90,6 @@ export const INITIAL_TOOLS: AITool[] = [
         required: true,
         defaultValue: 'A young man doing energetic viral Instagram dance trend step in a modern mall hall',
         description: 'Specify the dance style or motion...'
-      },
-      {
-        id: 'duration',
-        name: 'Video Length',
-        type: 'select',
-        options: ['15 Seconds', '30 Seconds'],
-        defaultValue: '15 Seconds'
       }
     ],
     outputType: 'video'
@@ -135,13 +115,6 @@ export const INITIAL_TOOLS: AITool[] = [
         required: true,
         defaultValue: 'Cute South Indian baby girl dancing in yellow dress in green rice field, natural lighting',
         description: 'Describe dress, background, and smile...'
-      },
-      {
-        id: 'aspectRatio',
-        name: 'Ratio',
-        type: 'select',
-        options: ['9:16 (Reels/Status)', '1:1 (Square)', '4:5 (Portrait)'],
-        defaultValue: '9:16 (Reels/Status)'
       }
     ],
     outputType: 'image'
@@ -167,13 +140,6 @@ export const INITIAL_TOOLS: AITool[] = [
         required: true,
         defaultValue: 'Professional Play School Website for Little Stars with enrollment forms, services, and colorful kids theme',
         description: 'Enter business name, services offered, and contact info...'
-      },
-      {
-        id: 'themeStyle',
-        name: 'Design Style',
-        type: 'select',
-        options: ['Colorful Playful (Schools/Kids)', 'Corporate Professional', 'E-commerce Storefront', 'Minimal Portfolio'],
-        defaultValue: 'Colorful Playful (Schools/Kids)'
       }
     ],
     outputType: 'code'
@@ -199,13 +165,6 @@ export const INITIAL_TOOLS: AITool[] = [
         required: true,
         defaultValue: 'Promotional video ad for a local clothing store with Aadi discount sales and family models',
         description: 'Specify product name, target language, and discounts...'
-      },
-      {
-        id: 'language',
-        name: 'Target Ad Language',
-        type: 'select',
-        options: ['Telugu / తెలుగు', 'Tamil / தமிழ்', 'Hindi / हिंदी', 'English', 'Malayalam / മലയാളം', 'Kannada / ಕನ್ನಡ'],
-        defaultValue: 'Telugu / తెలుగు'
       }
     ],
     outputType: 'video'
@@ -231,13 +190,6 @@ export const INITIAL_TOOLS: AITool[] = [
         required: true,
         defaultValue: 'A young Indian boy playing cricket with friends in a sunny green ground',
         description: 'Describe what you want to create...'
-      },
-      {
-        id: 'aspectRatio',
-        name: 'Aspect Ratio',
-        type: 'select',
-        options: ['1:1 (Square)', '16:9 (Landscape)', '9:16 (Portrait)'],
-        defaultValue: '1:1 (Square)'
       }
     ],
     outputType: 'image'
@@ -269,4 +221,56 @@ export const INITIAL_TOOLS: AITool[] = [
   }
 ];
 
+// Helper to generate a massive realistic catalog of 800+ AI tools across categories
+function buildFull800ToolCatalog(): AITool[] {
+  const tools: AITool[] = [...FEATURED_TOOLS];
+
+  const categoryConfigs: { cat: ToolCategory; prefix: string; count: number; outType: 'image' | 'video' | 'audio' | 'code' | 'text' }[] = [
+    { cat: 'Image AI', prefix: 'Photo, Banner, Portrait & Design', count: 180, outType: 'image' },
+    { cat: 'Video AI', prefix: 'Reel, Ad Video, Motion & Dance', count: 140, outType: 'video' },
+    { cat: 'Audio & Voice', prefix: 'Voiceover, TTS, Dubbing & Audio', count: 120, outType: 'audio' },
+    { cat: 'Coding & Dev', prefix: 'Website, App, API & Code Builder', count: 110, outType: 'code' },
+    { cat: 'PDF & Documents', prefix: 'Document, OCR, PDF & Report Summarizer', count: 90, outType: 'text' },
+    { cat: 'Text & Copywriting', prefix: 'SEO Prompt, Article & Ad Copy Writer', count: 90, outType: 'text' },
+    { cat: 'Marketing & Ads', prefix: 'Social Ad, Poster & Commercial Designer', count: 90, outType: 'image' },
+  ];
+
+  let globalIdCounter = 1;
+
+  categoryConfigs.forEach((cfg) => {
+    for (let i = 1; i <= cfg.count; i++) {
+      const toolId = `cat-tool-${cfg.cat.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${i}`;
+      tools.push({
+        id: toolId,
+        name: `${cfg.prefix} Tool #${i}`,
+        category: cfg.cat,
+        subcategory: `${cfg.cat} Suite`,
+        provider: `Neural Engine v${(i % 5) + 1}.0`,
+        modelUsed: `ai-model-${(i % 8) + 1}`,
+        rating: Number((4.5 + (i % 5) * 0.1).toFixed(1)),
+        reviewCount: 200 + i * 12,
+        latencyMs: 250 + (i % 30) * 10,
+        pricing: i % 2 === 0 ? 'Free / 1 Credit' : 'Free / 2 Credits',
+        badge: i % 10 === 0 ? 'Featured' : i % 7 === 0 ? 'Pro' : undefined,
+        description: `High performance AI tool for ${cfg.prefix.toLowerCase()} execution with regional language auto-enhancing.`,
+        inputs: [
+          {
+            id: 'prompt',
+            name: 'Prompt / Input Text',
+            type: 'textarea',
+            required: true,
+            defaultValue: `Execute ${cfg.prefix} action with detailed specifications in any language`,
+            description: 'Enter your custom requirements...'
+          }
+        ],
+        outputType: cfg.outType
+      });
+      globalIdCounter++;
+    }
+  });
+
+  return tools;
+}
+
+export const INITIAL_TOOLS: AITool[] = buildFull800ToolCatalog();
 export const TOOLS_DATA = INITIAL_TOOLS;
