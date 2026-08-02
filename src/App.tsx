@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { INITIAL_TOOLS, CATEGORIES_LIST } from './data/toolsData';
-import { AITool, ExecutionHistoryItem, ToolCategory } from './types';
+import { AITool, ExecutionHistoryItem } from './types';
 import { FullWidthToolRunner } from './components/FullWidthToolRunner';
 import { ToolCard } from './components/ToolCard';
 import { RealWalletModal } from './components/RealWalletModal';
-import { Sparkles, Search, Zap, Layers, CreditCard } from 'lucide-react';
+import { Sparkles, Search, Zap, CreditCard } from 'lucide-react';
 
 export default function App() {
   const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
@@ -14,7 +14,7 @@ export default function App() {
   const [comparedTools, setComparedTools] = useState<AITool[]>([]);
   const [walletBalance, setWalletBalance] = useState<number>(100);
   const [isWalletOpen, setIsWalletOpen] = useState<boolean>(false);
-  const [executionHistory, setExecutionHistory] = useState<ExecutionHistoryItem[]>([]);
+  const [, setExecutionHistory] = useState<ExecutionHistoryItem[]>([]);
 
   const filteredTools = useMemo(() => {
     return INITIAL_TOOLS.filter((tool) => {
