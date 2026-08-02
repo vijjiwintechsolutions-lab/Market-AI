@@ -11,7 +11,6 @@ export const CATEGORIES_LIST: ToolCategory[] = [
 ];
 
 export const INITIAL_TOOLS: AITool[] = [
-  // --- NEW FEATURED PORTRAIT & AD TOOLS ---
   {
     id: 'ai-family-portrait-studio',
     name: 'AI Family & Romance Studio',
@@ -211,8 +210,6 @@ export const INITIAL_TOOLS: AITool[] = [
     ],
     outputType: 'video'
   },
-
-  // --- EXISTING CORE MARKETPLACE TOOLS ---
   {
     id: 'pixel-studio-express',
     name: 'Pixel Studio Express (Text to Image)',
@@ -272,5 +269,4 @@ export const INITIAL_TOOLS: AITool[] = [
   }
 ];
 
-// Alias export to satisfy App.tsx import
 export const TOOLS_DATA = INITIAL_TOOLS;
