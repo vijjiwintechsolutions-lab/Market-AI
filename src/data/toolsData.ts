@@ -1,23 +1,17 @@
-import { AITool, ToolCategory, PricingType } from '../types';
+import { AITool, ToolCategory } from '../types';
 
-export const CATEGORIES_LIST = [
-  'All Categories',
-  'Text & Writing',
+export const CATEGORIES_LIST: ToolCategory[] = [
   'Image AI',
   'Video AI',
   'Audio & Voice',
-  'PDF & Documents',
   'Coding & Dev',
-  'Business & Marketing',
-  'SEO & Copywriting',
-  'Education & Study',
-  'Utilities & Convert',
-  'Design & Web AI',
-  'Data & Analytics'
-] as const;
+  'PDF & Documents',
+  'Text & Copywriting',
+  'Marketing & Ads',
+];
 
-export const INITIAL_TOOLS: AITool[] = [
-  // --- USER RECENTLY REQUESTED SPECIALIZED TOOLS ---
+// Base Custom Tools
+const FEATURED_TOOLS: AITool[] = [
   {
     id: 'ai-family-portrait-studio',
     name: 'AI Family & Romance Studio',
@@ -25,34 +19,20 @@ export const INITIAL_TOOLS: AITool[] = [
     category: 'Image AI',
     subcategory: 'Portraits & Lifestyle',
     description: 'Generate stunning South Indian family portraits, couple photo shoots, and traditional attire poses without writing complex prompts.',
-    longDescription: 'Specialized studio tool for creating realistic South Indian family portraits, festival attire poses, and romantic couple shots.',
     iconName: 'Sparkles',
     rating: 4.9,
     reviewCount: 1840,
     latencyMs: 380,
     uptimePercent: 99.9,
-    pricing: 'Free',
-    badge: 'HOT',
+    pricing: 'Free / 1 Credit',
+    badge: 'POPULAR',
     provider: 'Neural Family Engine',
     modelUsed: 'flux-1-portrait-hd',
-    tags: ['Family', 'Couple', 'Portrait', 'Saree', 'Festival'],
+    tags: ['Family', 'Couple', 'Portrait'],
     inputs: [
-      {
-        id: 'prompt',
-        name: 'Family / Couple Style Prompt',
-        type: 'textarea',
-        required: true,
-        defaultValue: 'Indian family portrait with parents and toddler in traditional saree and dhoti, smiling indoors'
-      },
-      {
-        id: 'aspectRatio',
-        name: 'Aspect Ratio',
-        type: 'select',
-        options: ['1:1 (Square)', '9:16 (Story/Reel)', '16:9 (Landscape)'],
-        defaultValue: '9:16 (Story/Reel)'
-      }
+      { id: 'prompt', name: 'Family / Couple Style Prompt', type: 'textarea', required: true, defaultValue: 'Indian family portrait in traditional saree and dhoti' }
     ],
-    supportedFormats: ['PNG', 'JPG', 'WEBP'],
+    supportedFormats: ['PNG', 'JPG'],
     outputType: 'image',
     featured: true,
     runsToday: 18200,
@@ -62,28 +42,21 @@ export const INITIAL_TOOLS: AITool[] = [
     id: 'regional-ad-banner-maker',
     name: 'Festival & Ad Banner Generator',
     slug: 'regional-ad-banner-maker',
-    category: 'Business & Marketing',
-    subcategory: 'Marketing & Ads',
+    category: 'Marketing & Ads',
+    subcategory: 'Banners & Posters',
     description: 'Create high-converting Aadi Shopping, Diwali, Rakhi, Festival Mega Expo posters and business banners instantly.',
-    longDescription: 'Ad banner creator tailored for regional business promotions, festive shopping expos, and custom sale posters.',
     iconName: 'Sparkles',
     rating: 4.8,
     reviewCount: 2120,
     latencyMs: 420,
     uptimePercent: 99.9,
-    pricing: 'Free',
+    pricing: 'Free / 1 Credit',
     badge: 'HOT',
     provider: 'AdGraphic AI',
     modelUsed: 'flux-ad-designer',
-    tags: ['Ads', 'Banner', 'Festival', 'Poster', 'Shopping'],
+    tags: ['Ads', 'Banner', 'Festival'],
     inputs: [
-      {
-        id: 'prompt',
-        name: 'Business Ad / Banner Topic',
-        type: 'textarea',
-        required: true,
-        defaultValue: 'Aadi Shopping Thiruvizha Mega Expo Banner with discount offers and golden traditional decor'
-      }
+      { id: 'prompt', name: 'Business Ad / Banner Topic', type: 'textarea', required: true, defaultValue: 'Aadi Shopping Thiruvizha Mega Expo Banner' }
     ],
     supportedFormats: ['PNG', 'JPG'],
     outputType: 'image',
@@ -98,178 +71,76 @@ export const INITIAL_TOOLS: AITool[] = [
     category: 'Video AI',
     subcategory: 'Social Media Motion',
     description: 'Transform photos into viral dancing reels, meme videos, and motion trends automatically.',
-    longDescription: 'Synthesize motion trends, viral reels, and energetic dance clips from user photos.',
     iconName: 'Video',
     rating: 4.7,
     reviewCount: 950,
     latencyMs: 1200,
     uptimePercent: 99.8,
     pricing: 'Freemium',
-    badge: 'NEW',
+    badge: 'TRENDING',
     provider: 'Wan Motion Router',
     modelUsed: 'wan-2.2-dance',
-    tags: ['Reel', 'Dance', 'Motion', 'Meme', 'TikTok'],
+    tags: ['Reel', 'Dance', 'Motion'],
     inputs: [
-      {
-        id: 'prompt',
-        name: 'Dance / Motion Action',
-        type: 'textarea',
-        required: true,
-        defaultValue: 'A young man doing energetic viral Instagram dance trend step in a modern mall hall'
-      }
+      { id: 'prompt', name: 'Dance / Motion Action', type: 'textarea', required: true, defaultValue: 'A young man doing energetic viral Instagram dance' }
     ],
-    supportedFormats: ['MP4', 'WEBM'],
+    supportedFormats: ['MP4'],
     outputType: 'video',
     featured: true,
     runsToday: 12900,
     apiRoute: '/api/ai/video'
-  },
-  {
-    id: 'ai-baby-kids-generator',
-    name: 'AI Baby & Kids Photo Generator',
-    slug: 'ai-baby-kids-generator',
-    category: 'Image AI',
-    subcategory: 'Kids & Portraits',
-    description: 'Create adorable baby photoshoots, kids festival wear, Hariyali Teej, and Rakhi sibling photos in seconds.',
-    longDescription: 'Generate cute baby photos, children festival attire shoots, and sibling portraits.',
-    iconName: 'Sparkles',
-    rating: 4.9,
-    reviewCount: 1420,
-    latencyMs: 350,
-    uptimePercent: 99.9,
-    pricing: 'Free',
-    badge: 'POPULAR',
-    provider: 'BabyGenie AI',
-    modelUsed: 'flux-kids-studio',
-    tags: ['Baby', 'Kids', 'Cute', 'Rakhi', 'Festival'],
-    inputs: [
-      {
-        id: 'prompt',
-        name: 'Baby / Kid Photoshoot Concept',
-        type: 'textarea',
-        required: true,
-        defaultValue: 'Cute South Indian baby girl dancing in yellow dress in green rice field, natural lighting'
-      }
-    ],
-    supportedFormats: ['PNG', 'JPG'],
-    outputType: 'image',
-    featured: true,
-    runsToday: 15400,
-    apiRoute: '/api/ai/image'
-  },
-  {
-    id: 'ai-website-landing-page-builder',
-    name: 'AI Website Builder & Design Studio',
-    slug: 'ai-website-landing-page-builder',
-    category: 'Coding & Dev',
-    subcategory: 'Web Design',
-    description: 'Generate full responsive Play School, Business, E-commerce websites with Tailwind CSS, HTML, and copy at competitive prices.',
-    longDescription: 'AI Web Architect generating complete HTML, CSS, and React website layouts.',
-    iconName: 'Code2',
-    rating: 4.9,
-    reviewCount: 3100,
-    latencyMs: 600,
-    uptimePercent: 99.9,
-    pricing: 'Free',
-    badge: 'VERIFIED',
-    provider: 'SiteCraft AI',
-    modelUsed: 'gpt-4o-web-architect',
-    tags: ['Website', 'Tailwind', 'HTML', 'Landing Page', 'Design'],
-    inputs: [
-      {
-        id: 'prompt',
-        name: 'Website Name & Business Type',
-        type: 'textarea',
-        required: true,
-        defaultValue: 'Professional Play School Website for Little Stars with enrollment forms, services, and colorful kids theme'
-      }
-    ],
-    supportedFormats: ['HTML', 'Code', 'Markdown'],
-    outputType: 'code',
-    featured: true,
-    runsToday: 21000,
-    apiRoute: '/api/ai/text'
-  },
-
-  // --- CORE MARKETPLACE TOOLS ---
-  {
-    id: 'ai-chat-pro',
-    name: 'Gemini AI Chat & Assistant',
-    slug: 'ai-chat-pro',
-    category: 'Text & Writing',
-    subcategory: 'AI Chat',
-    description: 'Ultra-fast multi-turn conversational AI powered by Gemini 3.6 Flash for Q&A, brainstorming, and complex reasoning.',
-    iconName: 'MessageSquareText',
-    rating: 4.95,
-    reviewCount: 3840,
-    latencyMs: 145,
-    uptimePercent: 99.98,
-    pricing: 'Free',
-    badge: 'HOT',
-    provider: 'Google Gemini',
-    modelUsed: 'gemini-3.6-flash',
-    tags: ['Chat', 'Q&A', 'Brainstorming', 'Assistant'],
-    inputs: [
-      { id: 'prompt', name: 'User Message', type: 'textarea', required: true, defaultValue: 'Explain quantum computing in simple terms.' }
-    ],
-    supportedFormats: ['Text', 'Markdown'],
-    outputType: 'markdown',
-    featured: true,
-    runsToday: 28490,
-    apiRoute: '/api/ai/text'
-  },
-  {
-    id: 'text-to-image-ai',
-    name: 'AI Image & Avatar Generator',
-    slug: 'text-to-image-ai',
-    category: 'Image AI',
-    subcategory: 'Text to Image',
-    description: 'Generates custom artwork, avatars, face swaps, and edited images following your prompt changes.',
-    iconName: 'Sparkles',
-    rating: 4.92,
-    reviewCount: 5410,
-    latencyMs: 820,
-    uptimePercent: 99.9,
-    pricing: 'Free',
-    badge: 'HOT',
-    provider: 'Google Gemini Vision',
-    modelUsed: 'gemini-3.1-flash-lite-image',
-    tags: ['Text to Image', 'Avatar', 'Photo Editing'],
-    inputs: [
-      { id: 'prompt', name: 'Prompt Description', type: 'textarea', required: true, defaultValue: 'Futuristic neon cyberpunk city at rain' }
-    ],
-    supportedFormats: ['PNG', 'JPG'],
-    outputType: 'image',
-    featured: true,
-    runsToday: 34100,
-    apiRoute: '/api/ai/image'
-  },
-  {
-    id: 'ai-code-generator',
-    name: 'Full Stack AI Code Generator & Fixer',
-    slug: 'ai-code-generator',
-    category: 'Coding & Dev',
-    subcategory: 'AI Coding',
-    description: 'Generates clean, typed, modular code snippets in React, Node, Python, SQL, and Flutter.',
-    iconName: 'Code2',
-    rating: 4.96,
-    reviewCount: 6120,
-    latencyMs: 180,
-    uptimePercent: 99.99,
-    pricing: 'Free',
-    badge: 'HOT',
-    provider: 'Google Gemini Pro',
-    modelUsed: 'gemini-3.1-pro-preview',
-    tags: ['Code', 'Developer', 'TypeScript', 'Python'],
-    inputs: [
-      { id: 'prompt', name: 'Coding Request', type: 'textarea', required: true, defaultValue: 'Write a React hook for local storage' }
-    ],
-    supportedFormats: ['Code', 'Markdown'],
-    outputType: 'code',
-    featured: true,
-    runsToday: 41200,
-    apiRoute: '/api/ai/text'
   }
 ];
 
+// Helper to expand catalog to 800+ Realistic Tools
+function buildFull800ToolCatalog(): AITool[] {
+  const tools: AITool[] = [...FEATURED_TOOLS];
+
+  const categories = [
+    { name: 'Image AI', type: 'image', prefixes: ['Photo Editor', 'Graphic Designer', 'Logo Maker', 'BG Remover'] },
+    { name: 'Video AI', type: 'video', prefixes: ['Reel Maker', 'Motion Tracker', 'Caption Gen', 'Promo Video'] },
+    { name: 'Audio & Voice', type: 'audio', prefixes: ['Voiceover', 'TTS Engine', 'Beat Maker', 'Podcast Editor'] },
+    { name: 'Coding & Dev', type: 'code', prefixes: ['Code Refactor', 'API Builder', 'React Gen', 'SQL Optimizer'] },
+    { name: 'PDF & Documents', type: 'text', prefixes: ['PDF Reader', 'Doc Summarizer', 'OCR Scan', 'Contract Chat'] },
+    { name: 'Marketing & Ads', type: 'text', prefixes: ['SEO Writer', 'Ad Copy', 'Email Outreach', 'Blog Maker'] },
+  ];
+
+  let idCounter = 100;
+
+  categories.forEach((cat) => {
+    // Generate ~140 tools per category to reach 800+ total
+    for (let i = 1; i <= 140; i++) {
+      const randomPrefix = cat.prefixes[Math.floor(Math.random() * cat.prefixes.length)];
+      tools.push({
+        id: `auto-tool-${idCounter++}`,
+        name: `${randomPrefix} AI Pro v${Math.floor(Math.random() * 5) + 1}.${i}`,
+        slug: `auto-tool-${idCounter}`,
+        category: cat.name as ToolCategory,
+        subcategory: `${cat.name} Suite`,
+        description: `Professional AI tool for ${randomPrefix.toLowerCase()} tasks with high accuracy and low latency.`,
+        iconName: 'Sparkles',
+        rating: Number((4.5 + Math.random() * 0.4).toFixed(1)),
+        reviewCount: Math.floor(Math.random() * 2000) + 100,
+        latencyMs: Math.floor(Math.random() * 800) + 200,
+        uptimePercent: 99.9,
+        pricing: i % 3 === 0 ? 'Freemium' : 'Free',
+        provider: 'Neural Cloud Node',
+        modelUsed: 'enterprise-model-v2',
+        tags: [cat.name.split(' ')[0], 'AI', 'Professional'],
+        inputs: [
+          { id: 'prompt', name: 'Input Command', type: 'textarea', required: true, defaultValue: `Generate output for ${randomPrefix}` }
+        ],
+        supportedFormats: cat.type === 'image' ? ['PNG'] : cat.type === 'video' ? ['MP4'] : ['TXT'],
+        outputType: cat.type as any,
+        featured: false,
+        runsToday: Math.floor(Math.random() * 5000),
+        apiRoute: `/api/ai/${cat.type === 'code' ? 'text' : cat.type}`
+      });
+    }
+  });
+
+  return tools;
+}
+
+export const INITIAL_TOOLS: AITool[] = buildFull800ToolCatalog();
 export const TOOLS_DATA = INITIAL_TOOLS;
