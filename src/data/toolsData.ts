@@ -1,7 +1,17 @@
-import { AITool } from '../types';
+import { AITool, ToolCategory } from '../types';
+
+export const CATEGORIES_LIST: ToolCategory[] = [
+  'Image AI',
+  'Video AI',
+  'Audio & Voice',
+  'Coding & Dev',
+  'PDF & Documents',
+  'Text & Copywriting',
+  'Marketing & Ads',
+];
 
 export const INITIAL_TOOLS: AITool[] = [
-  // --- NEW FEATURED TOOLS BASED ON USER REQUESTS ---
+  // --- NEW FEATURED PORTRAIT & AD TOOLS ---
   {
     id: 'ai-family-portrait-studio',
     name: 'AI Family & Romance Studio',
