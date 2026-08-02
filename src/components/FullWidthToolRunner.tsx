@@ -15,7 +15,7 @@ import {
   Paperclip, 
   Wand2, 
   Link as LinkIcon,
-  Image as ImageIcon,
+  ImageIcon,
   AlertCircle
 } from 'lucide-react';
 import { AITool, ExecutionHistoryItem } from '../types';
@@ -39,10 +39,15 @@ interface FullWidthToolRunnerProps {
 
 export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   tool,
+  allTools,
   onBack,
+  onSelectTool,
   onSaveHistory,
   favoriteIds,
   onToggleFavorite,
+  comparedTools,
+  onToggleCompare,
+  onSelectTag,
 }) => {
   const isImageTool = tool.outputType === 'image' || tool.category?.toLowerCase().includes('image');
   const isVideoTool = tool.outputType === 'video' || tool.category?.toLowerCase().includes('video');
@@ -170,7 +175,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   };
 
-  // 🔥 INSTANT DIRECT DEVICE DOWNLOAD 🔥
+  // 🔥 DIRECT DEVICE DOWNLOAD (Fixed 'finally' Syntax) 🔥
   const handleDirectDownloadMedia = async (mediaUrl: string | null, filename: string) => {
     if (!mediaUrl) return;
     setIsDownloading(true);
@@ -195,7 +200,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } fontally {
+    } finally {
       setIsDownloading(false);
     }
   };
