@@ -9,13 +9,10 @@ import {
   Search, 
   Zap, 
   CreditCard, 
-  Grid, 
-  Layers, 
   Bookmark, 
-  History, 
-  SlidersHorizontal,
   Compass,
-  Star
+  SlidersHorizontal,
+  Grid
 } from 'lucide-react';
 
 export default function App() {
@@ -61,7 +58,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#E0E0E0] font-sans flex flex-col">
-      {/* GLOBAL HEADER */}
+      {/* ORIGINAL HEADER */}
       <header className="bg-[#151517] border-b border-white/10 sticky top-0 z-40 px-4 sm:px-6 py-3.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div
@@ -120,13 +117,13 @@ export default function App() {
         />
       ) : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* SIDEBAR NAVIGATION */}
-          <aside className="lg:col-span-3 bg-[#151517] border border-white/10 rounded-2xl p-5 space-y-6 sticky top-20 shadow-xl">
+          {/* ORIGINAL SIDEBAR NAVIGATION */}
+          <aside className="lg:col-span-3 bg-[#151517] border border-white/10 rounded-2xl p-5 space-y-6 sticky top-20 shadow-xl font-mono">
             <div>
-              <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
                 <Compass className="w-4 h-4" /> AI Categories
               </h2>
-              <div className="mt-3 space-y-1 font-mono text-xs">
+              <div className="mt-3 space-y-1 text-xs">
                 <button
                   onClick={() => {
                     setSelectedCategory('All');
@@ -165,12 +162,12 @@ export default function App() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-white/10 space-y-3 font-mono text-xs">
-              <div className="flex items-center justify-between text-slate-400">
-                <span>Total Active AI Tools:</span>
+            <div className="pt-4 border-t border-white/10 space-y-3 text-xs text-slate-400">
+              <div className="flex items-center justify-between">
+                <span>Total Active Tools:</span>
                 <strong className="text-white">{INITIAL_TOOLS.length}</strong>
               </div>
-              <div className="flex items-center justify-between text-slate-400">
+              <div className="flex items-center justify-between">
                 <span>Platform SLA:</span>
                 <strong className="text-green-400">99.9% Uptime</strong>
               </div>
@@ -180,12 +177,12 @@ export default function App() {
           {/* MAIN CONTENT AREA */}
           <main className="lg:col-span-9 space-y-6">
             {/* HERO BANNER & SEARCH */}
-            <div className="bg-[#151517] border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5">
+            <div className="bg-[#151517] border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5 font-mono">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-3 py-1 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-[11px] font-mono font-bold rounded-full uppercase">
+                <span className="px-3 py-1 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-[11px] font-bold rounded-full uppercase">
                   Enterprise AI Engine
                 </span>
-                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-mono font-bold rounded-full uppercase">
+                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold rounded-full uppercase">
                   Multi-Language Ready
                 </span>
               </div>
@@ -193,12 +190,12 @@ export default function App() {
                 <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
                   AI Generation & Creation Hub
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed font-sans">
                   Generate realistic family photo shoots, festival ad banners, viral dance trends, baby photos, and complete websites in any language.
                 </p>
               </div>
 
-              {/* SEARCH INPUT */}
+              {/* SEARCH BAR */}
               <div className="relative">
                 <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                 <input
@@ -206,12 +203,12 @@ export default function App() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search tools (e.g., 'Family Studio', 'Banner Generator', 'Dance Reel')..."
-                  className="w-full pl-12 pr-4 py-3 bg-[#0A0A0A] border border-white/15 rounded-xl text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none font-mono shadow-inner"
+                  className="w-full pl-12 pr-4 py-3 bg-[#0A0A0A] border border-white/15 rounded-xl text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none shadow-inner"
                 />
               </div>
             </div>
 
-            {/* RESULTS HEADER */}
+            {/* RESULTS COUNTER */}
             <div className="flex items-center justify-between font-mono text-xs pt-2">
               <span className="text-slate-400">
                 Showing <strong className="text-white">{filteredTools.length}</strong> AI Tools
@@ -219,7 +216,7 @@ export default function App() {
               <span className="text-indigo-400 font-bold">Category: {selectedCategory}</span>
             </div>
 
-            {/* TOOLS GRID */}
+            {/* ORIGINAL CLEAN TOOLS GRID */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredTools.map((tool) => (
                 <ToolCard
