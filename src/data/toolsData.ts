@@ -271,3 +271,6 @@ export const INITIAL_TOOLS: AITool[] = [
     outputType: 'video'
   }
 ];
+
+// Alias export to satisfy App.tsx import
+export const TOOLS_DATA = INITIAL_TOOLS;
