@@ -10,137 +10,140 @@ export const CATEGORIES_LIST: ToolCategory[] = [
   'Marketing & Ads',
 ];
 
-// Base Custom Tools
-const FEATURED_TOOLS: AITool[] = [
+const CUSTOM_FEATURED_TOOLS: AITool[] = [
   {
     id: 'ai-family-portrait-studio',
     name: 'AI Family & Romance Studio',
-    slug: 'ai-family-portrait-studio',
     category: 'Image AI',
     subcategory: 'Portraits & Lifestyle',
-    description: 'Generate stunning South Indian family portraits, couple photo shoots, and traditional attire poses without writing complex prompts.',
-    iconName: 'Sparkles',
+    provider: 'Neural Family Engine',
+    modelUsed: 'flux-1-portrait-hd',
     rating: 4.9,
     reviewCount: 1840,
     latencyMs: 380,
-    uptimePercent: 99.9,
     pricing: 'Free / 1 Credit',
-    badge: 'POPULAR',
-    provider: 'Neural Family Engine',
-    modelUsed: 'flux-1-portrait-hd',
-    tags: ['Family', 'Couple', 'Portrait'],
+    badge: 'Popular',
+    description: 'Generate stunning South Indian family portraits, couple photo shoots, and traditional attire poses without writing complex prompts.',
     inputs: [
-      { id: 'prompt', name: 'Family / Couple Style Prompt', type: 'textarea', required: true, defaultValue: 'Indian family portrait in traditional saree and dhoti' }
+      { id: 'prompt', name: 'Family / Couple Style Prompt', type: 'textarea', required: true, defaultValue: 'Indian family portrait in traditional saree and dhoti smiling indoors' },
+      { id: 'aspectRatio', name: 'Aspect Ratio', type: 'select', options: ['1:1 (Square)', '9:16 (Story/Reel)', '16:9 (Landscape)'], defaultValue: '9:16 (Story/Reel)' }
     ],
-    supportedFormats: ['PNG', 'JPG'],
-    outputType: 'image',
-    featured: true,
-    runsToday: 18200,
-    apiRoute: '/api/ai/image'
+    outputType: 'image'
   },
   {
     id: 'regional-ad-banner-maker',
     name: 'Festival & Ad Banner Generator',
-    slug: 'regional-ad-banner-maker',
     category: 'Marketing & Ads',
     subcategory: 'Banners & Posters',
-    description: 'Create high-converting Aadi Shopping, Diwali, Rakhi, Festival Mega Expo posters and business banners instantly.',
-    iconName: 'Sparkles',
+    provider: 'AdGraphic AI',
+    modelUsed: 'flux-ad-designer',
     rating: 4.8,
     reviewCount: 2120,
     latencyMs: 420,
-    uptimePercent: 99.9,
     pricing: 'Free / 1 Credit',
-    badge: 'HOT',
-    provider: 'AdGraphic AI',
-    modelUsed: 'flux-ad-designer',
-    tags: ['Ads', 'Banner', 'Festival'],
+    badge: 'Hot',
+    description: 'Create high-converting Aadi Shopping, Diwali, Rakhi, Festival Mega Expo posters and business banners instantly.',
     inputs: [
-      { id: 'prompt', name: 'Business Ad / Banner Topic', type: 'textarea', required: true, defaultValue: 'Aadi Shopping Thiruvizha Mega Expo Banner' }
+      { id: 'prompt', name: 'Business Ad / Banner Topic', type: 'textarea', required: true, defaultValue: 'Aadi Shopping Thiruvizha Mega Expo Banner with discount offers' }
     ],
-    supportedFormats: ['PNG', 'JPG'],
-    outputType: 'image',
-    featured: true,
-    runsToday: 24100,
-    apiRoute: '/api/ai/image'
+    outputType: 'image'
   },
   {
     id: 'ai-dance-trend-meme-maker',
     name: 'AI Dance Trend & Meme Video Studio',
-    slug: 'ai-dance-trend-meme-maker',
     category: 'Video AI',
     subcategory: 'Social Media Motion',
-    description: 'Transform photos into viral dancing reels, meme videos, and motion trends automatically.',
-    iconName: 'Video',
+    provider: 'Wan Motion Router',
+    modelUsed: 'wan-2.2-dance',
     rating: 4.7,
     reviewCount: 950,
     latencyMs: 1200,
-    uptimePercent: 99.8,
-    pricing: 'Freemium',
-    badge: 'TRENDING',
-    provider: 'Wan Motion Router',
-    modelUsed: 'wan-2.2-dance',
-    tags: ['Reel', 'Dance', 'Motion'],
+    pricing: 'Free / 2 Credits',
+    badge: 'Trending',
+    description: 'Transform photos into viral dancing reels, meme videos, and motion trends automatically.',
     inputs: [
-      { id: 'prompt', name: 'Dance / Motion Action', type: 'textarea', required: true, defaultValue: 'A young man doing energetic viral Instagram dance' }
+      { id: 'prompt', name: 'Dance / Motion Action', type: 'textarea', required: true, defaultValue: 'A young man doing energetic viral Instagram dance step' }
     ],
-    supportedFormats: ['MP4'],
-    outputType: 'video',
-    featured: true,
-    runsToday: 12900,
-    apiRoute: '/api/ai/video'
+    outputType: 'video'
+  },
+  {
+    id: 'ai-baby-kids-generator',
+    name: 'AI Baby & Kids Photo Generator',
+    category: 'Image AI',
+    subcategory: 'Kids & Portraits',
+    provider: 'BabyGenie AI',
+    modelUsed: 'flux-kids-studio',
+    rating: 4.9,
+    reviewCount: 1420,
+    latencyMs: 350,
+    pricing: 'Free / 1 Credit',
+    badge: 'New',
+    description: 'Create adorable baby photoshoots, kids festival wear, Hariyali Teej, Rakhi sibling photos in seconds.',
+    inputs: [
+      { id: 'prompt', name: 'Baby / Kid Photoshoot Concept', type: 'textarea', required: true, defaultValue: 'Cute South Indian baby girl dancing in yellow dress in green rice field' }
+    ],
+    outputType: 'image'
+  },
+  {
+    id: 'ai-website-landing-page-builder',
+    name: 'AI Website Builder & Design Studio',
+    category: 'Coding & Dev',
+    subcategory: 'Web Architecture',
+    provider: 'SiteCraft AI',
+    modelUsed: 'gpt-4o-web-architect',
+    rating: 4.9,
+    reviewCount: 3100,
+    latencyMs: 600,
+    pricing: 'Competitive / 2 Credits',
+    badge: 'Enterprise',
+    description: 'Generate full responsive Play School, Business, E-commerce websites with Tailwind CSS, HTML, and copy at competitive prices.',
+    inputs: [
+      { id: 'prompt', name: 'Website Name & Business Type', type: 'textarea', required: true, defaultValue: 'Professional Play School Website for Little Stars with enrollment forms' }
+    ],
+    outputType: 'code'
   }
 ];
 
-// Helper to expand catalog to 800+ Realistic Tools
-function buildFull800ToolCatalog(): AITool[] {
-  const tools: AITool[] = [...FEATURED_TOOLS];
+function buildFull800Tools(): AITool[] {
+  const catalog: AITool[] = [...CUSTOM_FEATURED_TOOLS];
 
   const categories = [
-    { name: 'Image AI', type: 'image', prefixes: ['Photo Editor', 'Graphic Designer', 'Logo Maker', 'BG Remover'] },
-    { name: 'Video AI', type: 'video', prefixes: ['Reel Maker', 'Motion Tracker', 'Caption Gen', 'Promo Video'] },
-    { name: 'Audio & Voice', type: 'audio', prefixes: ['Voiceover', 'TTS Engine', 'Beat Maker', 'Podcast Editor'] },
-    { name: 'Coding & Dev', type: 'code', prefixes: ['Code Refactor', 'API Builder', 'React Gen', 'SQL Optimizer'] },
-    { name: 'PDF & Documents', type: 'text', prefixes: ['PDF Reader', 'Doc Summarizer', 'OCR Scan', 'Contract Chat'] },
-    { name: 'Marketing & Ads', type: 'text', prefixes: ['SEO Writer', 'Ad Copy', 'Email Outreach', 'Blog Maker'] },
+    { name: 'Image AI', outType: 'image', modules: ['Photo Editor', 'Portrait Studio', 'Banner Maker', 'Logo Generator', 'BG Eraser', '4K Upscaler'] },
+    { name: 'Video AI', outType: 'video', modules: ['Reel Generator', 'Dance Motion', 'Shorts Maker', 'Ad Creator', 'Character FX'] },
+    { name: 'Audio & Voice', outType: 'audio', modules: ['Voice Synthesizer', 'TTS Generator', 'Song Composer', 'Audio Cleaner'] },
+    { name: 'Coding & Dev', outType: 'code', modules: ['Web Builder', 'React Architect', 'SQL Query Maker', 'API Generator'] },
+    { name: 'PDF & Documents', outType: 'text', modules: ['PDF Summarizer', 'OCR Reader', 'Legal Audit', 'Research Assistant'] },
+    { name: 'Text & Copywriting', outType: 'text', modules: ['SEO Writer', 'Article Generator', 'Humanizer Pro', 'Prompt Enhancer'] },
+    { name: 'Marketing & Ads', outType: 'image', modules: ['Ad Poster Maker', 'Social Media Flyer', 'E-commerce Display'] }
   ];
 
-  let idCounter = 100;
+  let idCounter = 1000;
 
   categories.forEach((cat) => {
-    // Generate ~140 tools per category to reach 800+ total
-    for (let i = 1; i <= 140; i++) {
-      const randomPrefix = cat.prefixes[Math.floor(Math.random() * cat.prefixes.length)];
-      tools.push({
-        id: `auto-tool-${idCounter++}`,
-        name: `${randomPrefix} AI Pro v${Math.floor(Math.random() * 5) + 1}.${i}`,
-        slug: `auto-tool-${idCounter}`,
+    for (let i = 1; i <= 120; i++) {
+      const moduleName = cat.modules[i % cat.modules.length];
+      catalog.push({
+        id: `tool-${idCounter++}`,
+        name: `${moduleName} Module #${i}`,
         category: cat.name as ToolCategory,
-        subcategory: `${cat.name} Suite`,
-        description: `Professional AI tool for ${randomPrefix.toLowerCase()} tasks with high accuracy and low latency.`,
-        iconName: 'Sparkles',
-        rating: Number((4.5 + Math.random() * 0.4).toFixed(1)),
-        reviewCount: Math.floor(Math.random() * 2000) + 100,
-        latencyMs: Math.floor(Math.random() * 800) + 200,
-        uptimePercent: 99.9,
-        pricing: i % 3 === 0 ? 'Freemium' : 'Free',
-        provider: 'Neural Cloud Node',
-        modelUsed: 'enterprise-model-v2',
-        tags: [cat.name.split(' ')[0], 'AI', 'Professional'],
+        subcategory: `${cat.name} Workflow`,
+        provider: 'Neural AI Suite',
+        modelUsed: `neural-model-v${(i % 4) + 1}`,
+        rating: Number((4.6 + (i % 4) * 0.1).toFixed(1)),
+        reviewCount: 300 + i * 20,
+        latencyMs: 250 + i * 5,
+        pricing: i % 2 === 0 ? 'Free / 1 Credit' : 'Free / 2 Credits',
+        description: `High-speed AI tool for ${moduleName.toLowerCase()} tasks with custom parameters and live API stream links.`,
         inputs: [
-          { id: 'prompt', name: 'Input Command', type: 'textarea', required: true, defaultValue: `Generate output for ${randomPrefix}` }
+          { id: 'prompt', name: 'Input Command / Query', type: 'textarea', required: true, defaultValue: `Execute ${moduleName} task` }
         ],
-        supportedFormats: cat.type === 'image' ? ['PNG'] : cat.type === 'video' ? ['MP4'] : ['TXT'],
-        outputType: cat.type as any,
-        featured: false,
-        runsToday: Math.floor(Math.random() * 5000),
-        apiRoute: `/api/ai/${cat.type === 'code' ? 'text' : cat.type}`
+        outputType: cat.outType as any
       });
     }
   });
 
-  return tools;
+  return catalog;
 }
 
-export const INITIAL_TOOLS: AITool[] = buildFull800ToolCatalog();
+export const INITIAL_TOOLS: AITool[] = buildFull800Tools();
 export const TOOLS_DATA = INITIAL_TOOLS;
