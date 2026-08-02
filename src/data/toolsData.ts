@@ -1,38 +1,48 @@
-import { AITool, ToolCategory } from '../types';
+import { AITool, ToolCategory, PricingType } from '../types';
 
-export const CATEGORIES_LIST: ToolCategory[] = [
+export const CATEGORIES_LIST = [
+  'All Categories',
+  'Text & Writing',
   'Image AI',
   'Video AI',
   'Audio & Voice',
-  'Coding & Dev',
   'PDF & Documents',
-  'Text & Copywriting',
-  'Marketing & Ads',
-];
+  'Coding & Dev',
+  'Business & Marketing',
+  'SEO & Copywriting',
+  'Education & Study',
+  'Utilities & Convert',
+  'Design & Web AI',
+  'Data & Analytics'
+] as const;
 
 export const INITIAL_TOOLS: AITool[] = [
-  // --- CORE FEATURED TOOLS ---
+  // --- USER RECENTLY REQUESTED SPECIALIZED TOOLS ---
   {
     id: 'ai-family-portrait-studio',
     name: 'AI Family & Romance Studio',
+    slug: 'ai-family-portrait-studio',
     category: 'Image AI',
     subcategory: 'Portraits & Lifestyle',
-    provider: 'Neural Family Engine',
-    modelUsed: 'flux-1-portrait-hd',
+    description: 'Generate stunning South Indian family portraits, couple photo shoots, and traditional attire poses without writing complex prompts.',
+    longDescription: 'Specialized studio tool for creating realistic South Indian family portraits, festival attire poses, and romantic couple shots.',
+    iconName: 'Sparkles',
     rating: 4.9,
     reviewCount: 1840,
     latencyMs: 380,
-    pricing: 'Free / 1 Credit',
-    badge: 'Popular',
-    description: 'Generate stunning South Indian family portraits, couple photo shoots, traditional attire poses without writing complex prompts.',
+    uptimePercent: 99.9,
+    pricing: 'Free',
+    badge: 'HOT',
+    provider: 'Neural Family Engine',
+    modelUsed: 'flux-1-portrait-hd',
+    tags: ['Family', 'Couple', 'Portrait', 'Saree', 'Festival'],
     inputs: [
       {
         id: 'prompt',
         name: 'Family / Couple Style Prompt',
         type: 'textarea',
         required: true,
-        defaultValue: 'Indian family portrait with parents and toddler in traditional saree and dhoti, smiling indoors',
-        description: 'Describe the family pose, festival theme or style...'
+        defaultValue: 'Indian family portrait with parents and toddler in traditional saree and dhoti, smiling indoors'
       },
       {
         id: 'aspectRatio',
@@ -42,182 +52,223 @@ export const INITIAL_TOOLS: AITool[] = [
         defaultValue: '9:16 (Story/Reel)'
       }
     ],
-    outputType: 'image'
+    supportedFormats: ['PNG', 'JPG', 'WEBP'],
+    outputType: 'image',
+    featured: true,
+    runsToday: 18200,
+    apiRoute: '/api/ai/image'
   },
   {
     id: 'regional-ad-banner-maker',
     name: 'Festival & Ad Banner Generator',
-    category: 'Marketing & Ads',
-    subcategory: 'Banners & Posters',
-    provider: 'AdGraphic AI',
-    modelUsed: 'flux-ad-designer',
+    slug: 'regional-ad-banner-maker',
+    category: 'Business & Marketing',
+    subcategory: 'Marketing & Ads',
+    description: 'Create high-converting Aadi Shopping, Diwali, Rakhi, Festival Mega Expo posters and business banners instantly.',
+    longDescription: 'Ad banner creator tailored for regional business promotions, festive shopping expos, and custom sale posters.',
+    iconName: 'Sparkles',
     rating: 4.8,
     reviewCount: 2120,
     latencyMs: 420,
-    pricing: 'Free / 1 Credit',
-    badge: 'Hot',
-    description: 'Create high-converting Aadi Shopping, Diwali, Rakhi, Festival Mega Expo posters and business banners instantly.',
+    uptimePercent: 99.9,
+    pricing: 'Free',
+    badge: 'HOT',
+    provider: 'AdGraphic AI',
+    modelUsed: 'flux-ad-designer',
+    tags: ['Ads', 'Banner', 'Festival', 'Poster', 'Shopping'],
     inputs: [
       {
         id: 'prompt',
         name: 'Business Ad / Banner Topic',
         type: 'textarea',
         required: true,
-        defaultValue: 'Aadi Shopping Thiruvizha Mega Expo Banner with discount offers and golden traditional decor',
-        description: 'Enter your offer title, store name, or event details...'
+        defaultValue: 'Aadi Shopping Thiruvizha Mega Expo Banner with discount offers and golden traditional decor'
       }
     ],
-    outputType: 'image'
+    supportedFormats: ['PNG', 'JPG'],
+    outputType: 'image',
+    featured: true,
+    runsToday: 24100,
+    apiRoute: '/api/ai/image'
   },
   {
     id: 'ai-dance-trend-meme-maker',
     name: 'AI Dance Trend & Meme Video Studio',
+    slug: 'ai-dance-trend-meme-maker',
     category: 'Video AI',
     subcategory: 'Social Media Motion',
-    provider: 'Wan Motion Router',
-    modelUsed: 'wan-2.2-dance',
+    description: 'Transform photos into viral dancing reels, meme videos, and motion trends automatically.',
+    longDescription: 'Synthesize motion trends, viral reels, and energetic dance clips from user photos.',
+    iconName: 'Video',
     rating: 4.7,
     reviewCount: 950,
     latencyMs: 1200,
-    pricing: 'Free / 2 Credits',
-    badge: 'Trending',
-    description: 'Transform photos into viral dancing reels, meme videos, and motion trends automatically.',
+    uptimePercent: 99.8,
+    pricing: 'Freemium',
+    badge: 'NEW',
+    provider: 'Wan Motion Router',
+    modelUsed: 'wan-2.2-dance',
+    tags: ['Reel', 'Dance', 'Motion', 'Meme', 'TikTok'],
     inputs: [
       {
         id: 'prompt',
         name: 'Dance / Motion Action',
         type: 'textarea',
         required: true,
-        defaultValue: 'A young man doing energetic viral Instagram dance trend step in a modern mall hall',
-        description: 'Specify the dance style or motion...'
+        defaultValue: 'A young man doing energetic viral Instagram dance trend step in a modern mall hall'
       }
     ],
-    outputType: 'video'
+    supportedFormats: ['MP4', 'WEBM'],
+    outputType: 'video',
+    featured: true,
+    runsToday: 12900,
+    apiRoute: '/api/ai/video'
   },
   {
     id: 'ai-baby-kids-generator',
     name: 'AI Baby & Kids Photo Generator',
+    slug: 'ai-baby-kids-generator',
     category: 'Image AI',
     subcategory: 'Kids & Portraits',
-    provider: 'BabyGenie AI',
-    modelUsed: 'flux-kids-studio',
+    description: 'Create adorable baby photoshoots, kids festival wear, Hariyali Teej, and Rakhi sibling photos in seconds.',
+    longDescription: 'Generate cute baby photos, children festival attire shoots, and sibling portraits.',
+    iconName: 'Sparkles',
     rating: 4.9,
     reviewCount: 1420,
     latencyMs: 350,
-    pricing: 'Free / 1 Credit',
-    badge: 'New',
-    description: 'Create adorable baby photoshoots, kids festival wear, Hariyali Teej, Rakhi sibling photos in seconds.',
+    uptimePercent: 99.9,
+    pricing: 'Free',
+    badge: 'POPULAR',
+    provider: 'BabyGenie AI',
+    modelUsed: 'flux-kids-studio',
+    tags: ['Baby', 'Kids', 'Cute', 'Rakhi', 'Festival'],
     inputs: [
       {
         id: 'prompt',
         name: 'Baby / Kid Photoshoot Concept',
         type: 'textarea',
         required: true,
-        defaultValue: 'Cute South Indian baby girl dancing in yellow dress in green rice field, natural lighting',
-        description: 'Describe dress, background, and smile...'
+        defaultValue: 'Cute South Indian baby girl dancing in yellow dress in green rice field, natural lighting'
       }
     ],
-    outputType: 'image'
+    supportedFormats: ['PNG', 'JPG'],
+    outputType: 'image',
+    featured: true,
+    runsToday: 15400,
+    apiRoute: '/api/ai/image'
   },
   {
     id: 'ai-website-landing-page-builder',
     name: 'AI Website Builder & Design Studio',
+    slug: 'ai-website-landing-page-builder',
     category: 'Coding & Dev',
-    subcategory: 'Web Architecture',
-    provider: 'SiteCraft AI',
-    modelUsed: 'gpt-4o-web-architect',
+    subcategory: 'Web Design',
+    description: 'Generate full responsive Play School, Business, E-commerce websites with Tailwind CSS, HTML, and copy at competitive prices.',
+    longDescription: 'AI Web Architect generating complete HTML, CSS, and React website layouts.',
+    iconName: 'Code2',
     rating: 4.9,
     reviewCount: 3100,
     latencyMs: 600,
-    pricing: 'Competitive / 2 Credits',
-    badge: 'Enterprise',
-    description: 'Generate full responsive Play School, Business, E-commerce websites with Tailwind CSS, HTML, and copy at competitive prices.',
+    uptimePercent: 99.9,
+    pricing: 'Free',
+    badge: 'VERIFIED',
+    provider: 'SiteCraft AI',
+    modelUsed: 'gpt-4o-web-architect',
+    tags: ['Website', 'Tailwind', 'HTML', 'Landing Page', 'Design'],
     inputs: [
       {
         id: 'prompt',
         name: 'Website Name & Business Type',
         type: 'textarea',
         required: true,
-        defaultValue: 'Professional Play School Website for Little Stars with enrollment forms, services, and colorful kids theme',
-        description: 'Enter business name, services offered, and contact info...'
+        defaultValue: 'Professional Play School Website for Little Stars with enrollment forms, services, and colorful kids theme'
       }
     ],
-    outputType: 'code'
+    supportedFormats: ['HTML', 'Code', 'Markdown'],
+    outputType: 'code',
+    featured: true,
+    runsToday: 21000,
+    apiRoute: '/api/ai/text'
   },
+
+  // --- CORE MARKETPLACE TOOLS ---
   {
-    id: 'multilingual-video-ads-maker',
-    name: 'All-Language Video Ad Creator',
-    category: 'Video AI',
-    subcategory: 'Commercial Ads',
-    provider: 'Veo Commercial Mesh',
-    modelUsed: 'veo-ad-multilingual',
-    rating: 4.8,
-    reviewCount: 1680,
-    latencyMs: 1100,
-    pricing: 'Free / 2 Credits',
-    badge: 'Multi-Lang',
-    description: 'Create high-converting promotional video ads in Telugu, Tamil, Hindi, English, and all regional languages.',
+    id: 'ai-chat-pro',
+    name: 'Gemini AI Chat & Assistant',
+    slug: 'ai-chat-pro',
+    category: 'Text & Writing',
+    subcategory: 'AI Chat',
+    description: 'Ultra-fast multi-turn conversational AI powered by Gemini 3.6 Flash for Q&A, brainstorming, and complex reasoning.',
+    iconName: 'MessageSquareText',
+    rating: 4.95,
+    reviewCount: 3840,
+    latencyMs: 145,
+    uptimePercent: 99.98,
+    pricing: 'Free',
+    badge: 'HOT',
+    provider: 'Google Gemini',
+    modelUsed: 'gemini-3.6-flash',
+    tags: ['Chat', 'Q&A', 'Brainstorming', 'Assistant'],
     inputs: [
-      {
-        id: 'prompt',
-        name: 'Ad Promo Script / Product Idea',
-        type: 'textarea',
-        required: true,
-        defaultValue: 'Promotional video ad for a local clothing store with Aadi discount sales and family models',
-        description: 'Specify product name, target language, and discounts...'
-      }
+      { id: 'prompt', name: 'User Message', type: 'textarea', required: true, defaultValue: 'Explain quantum computing in simple terms.' }
     ],
-    outputType: 'video'
+    supportedFormats: ['Text', 'Markdown'],
+    outputType: 'markdown',
+    featured: true,
+    runsToday: 28490,
+    apiRoute: '/api/ai/text'
   },
   {
-    id: 'pixel-studio-express',
-    name: 'Pixel Studio Express (Text to Image)',
+    id: 'text-to-image-ai',
+    name: 'AI Image & Avatar Generator',
+    slug: 'text-to-image-ai',
     category: 'Image AI',
-    subcategory: 'Photorealism',
-    provider: 'FLUX.1 Ultra',
-    modelUsed: 'flux-1-schnell',
-    rating: 4.9,
-    reviewCount: 4200,
-    latencyMs: 320,
-    pricing: 'Free / 1 Credit',
-    badge: 'Ultra HD',
-    description: 'Generate hyper-realistic 8K images with clean human anatomy, vivid lighting, and crisp background details.',
+    subcategory: 'Text to Image',
+    description: 'Generates custom artwork, avatars, face swaps, and edited images following your prompt changes.',
+    iconName: 'Sparkles',
+    rating: 4.92,
+    reviewCount: 5410,
+    latencyMs: 820,
+    uptimePercent: 99.9,
+    pricing: 'Free',
+    badge: 'HOT',
+    provider: 'Google Gemini Vision',
+    modelUsed: 'gemini-3.1-flash-lite-image',
+    tags: ['Text to Image', 'Avatar', 'Photo Editing'],
     inputs: [
-      {
-        id: 'prompt',
-        name: 'Prompt Description',
-        type: 'textarea',
-        required: true,
-        defaultValue: 'A young Indian boy playing cricket with friends in a sunny green ground',
-        description: 'Describe what you want to create...'
-      }
+      { id: 'prompt', name: 'Prompt Description', type: 'textarea', required: true, defaultValue: 'Futuristic neon cyberpunk city at rain' }
     ],
-    outputType: 'image'
+    supportedFormats: ['PNG', 'JPG'],
+    outputType: 'image',
+    featured: true,
+    runsToday: 34100,
+    apiRoute: '/api/ai/image'
   },
   {
-    id: 'ai-video-clip-animator',
-    name: 'AI Video & Clip Animator',
-    category: 'Video AI',
-    subcategory: 'Video Generation',
-    provider: 'Wan 2.2 Open-Source Router',
-    modelUsed: 'wan-2.2-open-source',
-    rating: 4.8,
-    reviewCount: 2890,
-    latencyMs: 950,
-    pricing: 'Free / 2 Credits',
-    badge: 'HD Motion',
-    description: 'Synthesize cinematic motion scenes and smooth full-HD video clips from simple prompts.',
+    id: 'ai-code-generator',
+    name: 'Full Stack AI Code Generator & Fixer',
+    slug: 'ai-code-generator',
+    category: 'Coding & Dev',
+    subcategory: 'AI Coding',
+    description: 'Generates clean, typed, modular code snippets in React, Node, Python, SQL, and Flutter.',
+    iconName: 'Code2',
+    rating: 4.96,
+    reviewCount: 6120,
+    latencyMs: 180,
+    uptimePercent: 99.99,
+    pricing: 'Free',
+    badge: 'HOT',
+    provider: 'Google Gemini Pro',
+    modelUsed: 'gemini-3.1-pro-preview',
+    tags: ['Code', 'Developer', 'TypeScript', 'Python'],
     inputs: [
-      {
-        id: 'prompt',
-        name: 'Video Motion Prompt',
-        type: 'textarea',
-        required: true,
-        defaultValue: 'Cinematic video of young boys playing cricket in natural sunlight',
-        description: 'Describe the scene motion...'
-      }
+      { id: 'prompt', name: 'Coding Request', type: 'textarea', required: true, defaultValue: 'Write a React hook for local storage' }
     ],
-    outputType: 'video'
+    supportedFormats: ['Code', 'Markdown'],
+    outputType: 'code',
+    featured: true,
+    runsToday: 41200,
+    apiRoute: '/api/ai/text'
   }
 ];
 
