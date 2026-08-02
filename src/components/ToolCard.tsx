@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Star, Zap, Bookmark, SlidersHorizontal, ArrowRight } from 'lucide-react';
+import { Star, Zap, Bookmark, ArrowRight } from 'lucide-react';
 import { AITool } from '../types';
 
 interface ToolCardProps {
@@ -30,7 +30,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
   return (
     <div className="bg-[#151517] border border-white/10 hover:border-indigo-500/50 rounded-xl p-5 shadow-xl flex flex-col justify-between transition-all group relative overflow-hidden font-mono">
       <div className="space-y-3">
-        {/* Header Tags */}
+        {/* Header Badges */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-indigo-600/30 text-indigo-300 border border-indigo-500/40">
@@ -68,19 +68,18 @@ export const ToolCard: React.FC<ToolCardProps> = ({
           </p>
         </div>
 
-        {/* Metadata Badges */}
+        {/* Metadata */}
         <div className="flex items-center gap-3 text-[11px] text-slate-400 pt-1">
           <span className="flex items-center gap-1 text-amber-400 font-bold">
             <Star className="w-3.5 h-3.5 fill-amber-400" /> {tool.rating || 4.8}
           </span>
-          <span>Provider: <strong className="text-slate-200">{(safeProvider || '').slice(0, 15)}</strong></span>
-          <span className="truncate">Model: <strong className="text-indigo-300">{(safeModelUsed || '').slice(0, 15)}</strong></span>
+          <span className="truncate">Provider: <strong className="text-slate-200">{(safeProvider || '').slice(0, 15)}</strong></span>
         </div>
       </div>
 
-      {/* Action Footer */}
+      {/* Footer */}
       <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold">
+        <div className="flex items-center gap-1 text-xs text-green-400 font-bold">
           <Zap className="w-3.5 h-3.5 fill-green-400" />
           <span>{safePricing}</span>
         </div>
