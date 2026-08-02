@@ -4,7 +4,7 @@ export async function removeImageBackground(imageSource: string | File | Blob): 
   try {
     const blob = await imglyRemoveBackground(imageSource, {
       progress: (key, current, total) => {
-        console.log(`Downloading background removal model assets [${key}]: ${current}/${total}`);
+        console.log(`Downloading background removal assets [${key}]: ${current}/${total}`);
       },
     });
     return blob;
@@ -13,3 +13,14 @@ export async function removeImageBackground(imageSource: string | File | Blob): 
     throw new Error(error?.message || 'Background removal processing failed.');
   }
 }
+
+// Alias export to satisfy apiService.ts import
+export const processBackgroundRemoval = async (imageSource: string | File | Blob): Promise<string> => {
+  const blob = await removeImageBackground(imageSource);
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
