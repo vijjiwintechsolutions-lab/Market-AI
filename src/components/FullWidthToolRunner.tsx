@@ -145,34 +145,39 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   };
 
-  const handleDirectDownloadMedia = async (mediaUrl: string | null) => {
-    if (!mediaUrl) return;
+  // 🚀 DIRECT BLOB DOWNLOAD HANDLER (No new tabs, exact file extension)
+  const handleDirectDownloadFile = async () => {
+    if (!fileDownloadUrl) return;
     setIsDownloading(true);
-    const selectedFormat = inputValues['outputFormat'] || '';
-    let ext = 'png';
-    if (selectedFormat.includes('.jpg')) ext = 'jpg';
-    else if (selectedFormat.includes('.webp')) ext = 'webp';
-    else if (selectedFormat.includes('.mp4')) ext = 'mp4';
-    else if (selectedFormat.includes('.webm')) ext = 'webm';
-    else if (selectedFormat.includes('.mp3')) ext = 'mp3';
-    else if (selectedFormat.includes('.wav')) ext = 'wav';
-    else if (selectedFormat.includes('.pdf')) ext = 'pdf';
-    else if (selectedFormat.includes('.csv')) ext = 'csv';
-    else if (selectedFormat.includes('.txt')) ext = 'txt';
 
-    const filename = `${tool.id}-generated.${ext}`;
+    let ext = 'pdf';
+    if (tool.id === 'pdf-to-jpg') ext = 'jpg';
+    else if (tool.id === 'compress-pdf') ext = 'pdf';
+    else if (tool.id === 'rotate-pdf') ext = 'pdf';
+    else if (tool.id === 'delete-pdf-pages') ext = 'pdf';
+
+    const filename = `${tool.id}-optimized.${ext}`;
+
     try {
-      const res = await fetch(mediaUrl);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const response = await fetch(fileDownloadUrl);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
       const link = document.createElement('a');
-      link.href = blobUrl; link.download = filename;
-      document.body.appendChild(link); link.click(); document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-    } catch (err) {
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      // Fallback if fetch fails
       const link = document.createElement('a');
-      link.href = mediaUrl; link.target = '_blank'; link.download = filename;
-      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      link.href = fileDownloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } finally {
       setIsDownloading(false);
     }
@@ -293,9 +298,10 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
                 
                 {isPDF && fileDownloadUrl ? (
-                  <a href={fileDownloadUrl} download={`${tool.id}-modified.pdf`} className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 text-center">
-                    <Download className="w-4 h-4" /> Download Processed PDF
-                  </a>
+                  <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-all">
+                    {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                    <span>{isDownloading ? 'Downloading...' : 'Download Processed PDF'}</span>
+                  </button>
                 ) : (
                   <button onClick={() => { navigator.clipboard.writeText(outputResult); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="w-full py-2 bg-white/5 text-slate-200 text-xs font-bold rounded flex items-center justify-center gap-2 cursor-pointer">
                     {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />} <span>{copied ? 'Copied!' : 'Copy Result'}</span>
