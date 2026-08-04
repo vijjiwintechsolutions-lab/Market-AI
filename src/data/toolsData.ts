@@ -1,106 +1,81 @@
 import { AITool, ToolCategory } from '../types';
 
 export const CATEGORIES_LIST: ToolCategory[] = [
-  'Image Tools',
-  'Video Tools',
-  'Audio Tools',
   'PDF & Document Tools',
+  'Image Tools (AI & Utility)',
+  'Video Tools (AI & Utility)',
+  'Audio Tools (AI & Utility)',
   'Calculators & Finance',
   'Coding & Web Tools',
   'Text & Marketing Tools'
 ];
 
-// 1. CORE REAL UNIQUE TOOLS (CLEAN NAMES)
-const UNIQUE_CORE_TOOLS: AITool[] = [
+const PDF_SUITE_TOOLS: AITool[] = [
   {
-    id: 'ringtone-audio-cutter',
-    name: 'Audio & Ringtone Cutter',
-    category: 'Audio Tools',
-    subcategory: 'Audio Editing',
-    provider: 'WebAudio Core Engine',
-    modelUsed: 'browser-webaudio-v1',
-    rating: 4.9,
-    reviewCount: 4120,
-    latencyMs: 15,
-    pricing: 'Free',
-    badge: 'Fast',
-    description: 'Trim audio files, cut custom ringtones, fade in/out seamlessly without uploading files to external servers.',
-    inputs: [
-      { id: 'startTime', name: 'Start Time (Seconds)', type: 'text', required: true, defaultValue: '0' },
-      { id: 'endTime', name: 'End Time (Seconds)', type: 'text', required: true, defaultValue: '30' }
-    ],
-    outputType: 'audio'
-  },
-  {
-    id: 'video-cutter-trimmer',
-    name: 'Instant Video Trimmer & Cutter',
-    category: 'Video Tools',
-    subcategory: 'Video Editing',
-    provider: 'FFmpeg WASM Engine',
-    modelUsed: 'ffmpeg-wasm-core',
-    rating: 4.8,
-    reviewCount: 3890,
-    latencyMs: 45,
-    pricing: 'Free',
-    badge: 'Utility',
-    description: 'Cut unwanted parts, split video clips, and trim length right inside your browser.',
-    inputs: [
-      { id: 'startCut', name: 'Cut Start Time (MM:SS)', type: 'text', required: true, defaultValue: '00:05' },
-      { id: 'endCut', name: 'Cut End Time (MM:SS)', type: 'text', required: true, defaultValue: '00:45' }
-    ],
-    outputType: 'video'
-  },
-  {
-    id: 'pdf-page-remover-organizer',
-    name: 'PDF Page Add, Remove & Split',
+    id: 'delete-pdf-pages',
+    name: 'Delete PDF Pages',
     category: 'PDF & Document Tools',
-    subcategory: 'PDF Utilities',
-    provider: 'PDF-Lib Local Engine',
-    modelUsed: 'pdf-lib-v2',
+    subcategory: 'Organize',
+    provider: 'DocuCore Local',
+    modelUsed: 'pdf-lib',
     rating: 4.9,
-    reviewCount: 5200,
-    latencyMs: 30,
-    pricing: 'Free',
-    badge: 'Essential',
-    description: 'Delete specific pages, reorder pages, or insert new pages into your PDF instantly.',
-    inputs: [
-      { id: 'pagesToRemove', name: 'Page Numbers to Remove (e.g. 2, 4, 7-10)', type: 'text', required: true, defaultValue: '2, 5' }
-    ],
-    outputType: 'text'
-  },
-  {
-    id: 'pdf-word-editor',
-    name: 'PDF & Word Document Editor',
-    category: 'PDF & Document Tools',
-    subcategory: 'Document Suite',
-    provider: 'DocuCraft Engine',
-    modelUsed: 'docu-edit-v1',
-    rating: 4.8,
     reviewCount: 3100,
-    latencyMs: 40,
+    latencyMs: 10,
     pricing: 'Free',
-    badge: 'Popular',
-    description: 'Edit text, modify layouts, and convert Word documents to PDF seamlessly.',
+    description: 'Remove one or multiple pages from your PDF document easily.',
     inputs: [
-      { id: 'prompt', name: 'Editing Instructions / Text Update', type: 'textarea', required: true, defaultValue: 'Update header title and modify paragraph margins' }
+      { id: 'pagesToRemove', name: 'Pages to Delete (e.g. 2, 4)', type: 'text', required: true, defaultValue: '2' }
     ],
     outputType: 'text'
   },
   {
-    id: 'pdf-lock-remover',
-    name: 'PDF Password Unlocker',
+    id: 'rotate-pdf',
+    name: 'Rotate PDF',
     category: 'PDF & Document Tools',
-    subcategory: 'PDF Security',
-    provider: 'PDF Security Core',
-    modelUsed: 'pdf-unlock-wasm',
-    rating: 4.9,
-    reviewCount: 2800,
-    latencyMs: 25,
+    subcategory: 'Organize',
+    provider: 'DocuCore Local',
+    modelUsed: 'pdf-lib',
+    rating: 4.7,
+    reviewCount: 1900,
+    latencyMs: 10,
     pricing: 'Free',
-    badge: 'Security',
-    description: 'Remove password protection and restrictions from PDF files locally.',
+    description: 'Rotate one or all pages in your PDF document.',
     inputs: [
-      { id: 'pdfPassword', name: 'Enter Known Master Password', type: 'text', required: true, defaultValue: '' }
+      { id: 'rotationAngle', name: 'Rotation Angle', type: 'select', options: ['90° Clockwise', '90° Counter-Clockwise', '180° Flip'], defaultValue: '90° Clockwise' }
+    ],
+    outputType: 'text'
+  },
+  {
+    id: 'pdf-to-jpg',
+    name: 'PDF to JPG',
+    category: 'PDF & Document Tools',
+    subcategory: 'Convert',
+    provider: 'FormatCore Engine',
+    modelUsed: 'img-convert-v1',
+    rating: 4.8,
+    reviewCount: 4600,
+    latencyMs: 20,
+    pricing: 'Free',
+    description: 'Extract images from your PDF or convert each page to a JPG file.',
+    inputs: [
+      { id: 'imageQuality', name: 'Image Quality', type: 'select', options: ['Standard (72dpi)', 'High Quality (300dpi)'], defaultValue: 'High Quality (300dpi)' }
+    ],
+    outputType: 'text'
+  },
+  {
+    id: 'compress-pdf',
+    name: 'Compress PDF',
+    category: 'PDF & Document Tools',
+    subcategory: 'Optimize',
+    provider: 'OptimizeCore',
+    modelUsed: 'pdf-compressor',
+    rating: 5.0,
+    reviewCount: 12400,
+    latencyMs: 50,
+    pricing: 'Free',
+    description: 'Reduce the file size of your PDF without losing quality.',
+    inputs: [
+      { id: 'compressionLevel', name: 'Compression Level', type: 'select', options: ['Basic Compression', 'Strong Compression'], defaultValue: 'Basic Compression' }
     ],
     outputType: 'text'
   },
@@ -115,7 +90,6 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
     reviewCount: 8900,
     latencyMs: 5,
     pricing: 'Free',
-    badge: 'Financial',
     description: 'Calculate monthly home loan, car loan, or personal loan EMIs with amortization charts.',
     inputs: [
       { id: 'loanAmount', name: 'Principal Loan Amount (₹)', type: 'text', required: true, defaultValue: '1000000' },
@@ -127,7 +101,7 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
   {
     id: 'image-generator-pro',
     name: 'AI Text to Image Generator',
-    category: 'Image Tools',
+    category: 'Image Tools (AI & Utility)',
     subcategory: 'AI Art',
     provider: 'Google Imagen 3 / Flux',
     modelUsed: 'imagen-3.0',
@@ -135,7 +109,6 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
     reviewCount: 3400,
     latencyMs: 320,
     pricing: 'Free',
-    badge: 'Popular',
     description: 'Generate realistic photos, posters, and artworks from descriptive text prompts.',
     inputs: [
       { id: 'prompt', name: 'Detailed Image Prompt', type: 'textarea', required: true, defaultValue: 'An Indian boy playing cricket in a green village field' },
@@ -145,82 +118,9 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
   }
 ];
 
-function buildFull800OriginalTools(): AITool[] {
-  const catalog: AITool[] = [...UNIQUE_CORE_TOOLS];
-  const functionalPrefixes = ['Smart', 'Fast', 'Pro', 'Express', 'Auto', 'Precision', 'Advanced', 'Ultra'];
-
-  const realToolCategories = [
-    {
-      cat: 'PDF & Document Tools',
-      sub: 'Document Suite',
-      out: 'text',
-      names: ['PDF Watermark Remover', 'PDF Merger', 'PDF Compressor', 'PDF to Excel Converter', 'PDF Text Extractor']
-    },
-    {
-      cat: 'Calculators & Finance',
-      sub: 'Financial Math',
-      out: 'text',
-      names: ['SIP Return Calculator', 'GST & Tax Calculator', 'Compound Interest Calculator', 'FD Interest Calculator']
-    },
-    {
-      cat: 'Audio Tools',
-      sub: 'Sound Engineering',
-      out: 'audio',
-      names: ['Audio Volume Booster', 'MP3 Converter', 'Vocal Remover', 'Audio Pitch Shifter']
-    },
-    {
-      cat: 'Video Tools',
-      sub: 'Video Editing',
-      out: 'video',
-      names: ['Video Speed Changer', 'Video Watermark Adder', 'MP4 to GIF Converter', 'Video Muter']
-    },
-    {
-      cat: 'Image Tools',
-      sub: 'Graphics Suite',
-      out: 'image',
-      names: ['PNG to JPG Converter', 'Image Resizer & Crop', 'Image Compressor Pro', 'Photo Watermark Remover']
-    },
-    {
-      cat: 'Coding & Web Tools',
-      sub: 'Developer Utilities',
-      out: 'code',
-      names: ['JSON Formatter & Validator', 'SQL Query Optimizer', 'React Component Generator', 'CSS Minifier']
-    },
-    {
-      cat: 'Text & Marketing Tools',
-      sub: 'Copywriting & Content',
-      out: 'text',
-      names: ['SEO Article Generator', 'Social Media Hashtag Creator', 'Email Subject Line Enhancer']
-    }
-  ];
-
-  let counter = 1000;
-  realToolCategories.forEach((group) => {
-    group.names.forEach((baseName) => {
-      functionalPrefixes.forEach((prefix) => {
-        catalog.push({
-          id: `tool-${counter++}`,
-          name: `${prefix} ${baseName}`,
-          category: group.cat as ToolCategory,
-          subcategory: group.sub,
-          provider: 'Neural Utility Engine',
-          modelUsed: 'browser-core-v2',
-          rating: Number((4.7 + Math.random() * 0.2).toFixed(1)),
-          reviewCount: Math.floor(200 + Math.random() * 8000),
-          latencyMs: Math.floor(10 + Math.random() * 80),
-          pricing: 'Free',
-          description: `A fast utility tool for ${baseName.toLowerCase()} operations with browser-native execution.`,
-          inputs: [
-            { id: 'prompt', name: 'Task Specification / Inputs', type: 'textarea', required: true, defaultValue: `Execute ${baseName} operation` }
-          ],
-          outputType: group.out as any
-        });
-      });
-    });
-  });
-
-  return catalog;
+function buildFullCatalog(): AITool[] {
+  return [...PDF_SUITE_TOOLS];
 }
 
-export const INITIAL_TOOLS: AITool[] = buildFull800OriginalTools();
+export const INITIAL_TOOLS: AITool[] = buildFullCatalog();
 export const TOOLS_DATA = INITIAL_TOOLS;
