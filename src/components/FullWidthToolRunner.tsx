@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  ArrowLeft, Play, Sparkles, Check, Download, RefreshCw, Sliders, UploadCloud, X, Paperclip, FileText, Edit3, Minimize2, Merge, Layers
+  ArrowLeft, Play, Sparkles, Check, Download, RefreshCw, Sliders, UploadCloud, X, Paperclip, FileText
 } from 'lucide-react';
 import { AITool, ExecutionHistoryItem } from '../types';
 import { apiService } from '../services/apiService';
@@ -19,12 +19,11 @@ interface FullWidthToolRunnerProps {
 }
 
 export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
-  tool, onBack, onSaveHistory, favoriteIds, onToggleFavorite, onSelectTool, allTools
+  tool, onBack, onSaveHistory, onSelectTool, allTools
 }) => {
   const isImage = tool.outputType === 'image' || tool.category?.toLowerCase().includes('image');
   const isPDF = tool.category?.toLowerCase().includes('pdf') || tool.category?.toLowerCase().includes('document');
 
-  // 🚀 ADOBE-STYLE DYNAMIC FORMATS (JPG, PNG, TIFF)
   let formatOptions = ['JPG (*.jpg, *.jpeg)', 'PNG (*.png)', 'TIFF (*.tiff)'];
   if (!isPDF && !isImage) formatOptions = ['Plain Text (.txt)', 'PDF Document (.pdf)'];
 
@@ -34,6 +33,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   const [isRunning, setIsRunning] = useState(false);
   const [outputResult, setOutputResult] = useState<string | null>(null);
   const [fileDownloadUrl, setFileDownloadUrl] = useState<string | null>(null);
+  const [imageUrlResult, setImageUrlResult] = useState<string | null>(null);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [elapsedSec, setElapsedSec] = useState<number>(0);
@@ -46,7 +46,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     tool.inputs.forEach((p) => { initial[p.id] = p.defaultValue || ''; });
     initial['outputFormat'] = formatOptions[0];
     setInputValues(initial);
-    setOutputResult(null); setFileDownloadUrl(null);
+    setOutputResult(null); setFileDownloadUrl(null); setImageUrlResult(null);
     setUploadedFile(null); setPreviewUrl(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -67,7 +67,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
   const handleInputChange = (id: string, value: any) => setInputValues((prev) => ({ ...prev, [id]: value }));
 
-  // 🚀 ADOBE-STYLE LIVE EXECUTION WITH PROGRESS BAR ANIMATION
   const handleExecute = async () => {
     if (isPDF && !uploadedFile) {
       alert("Please upload a PDF file first to convert!");
@@ -75,11 +74,10 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
 
     setIsRunning(true);
-    setOutputResult(null); setFileDownloadUrl(null);
+    setOutputResult(null); setFileDownloadUrl(null); setImageUrlResult(null);
     setProgressPercent(0); setElapsedSec(0);
     const startTime = Date.now();
 
-    // Smooth Live Progress Bar Simulator (Like Adobe Acrobat 0% to 100%)
     const progressInt = setInterval(() => {
       setProgressPercent((p) => (p < 92 ? p + Math.floor(Math.random() * 12) + 5 : p));
     }, 120);
@@ -88,7 +86,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     try {
       const res = await apiService.executeTool({ tool, inputValues, file: uploadedFile });
       clearInterval(progressInt);
-      setProgressPercent(100); // 100% Complete!
+      setProgressPercent(100);
       
       const elapsed = Date.now() - startTime;
       setExecutionTime(res.executionTimeMs || elapsed);
@@ -96,6 +94,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       setTimeout(() => {
         if (res.success) {
           if (res.fileUrl) setFileDownloadUrl(res.fileUrl);
+          if (res.imageUrl) setImageUrlResult(res.imageUrl);
           setOutputResult(res.textOutput || "File Ready!");
 
           onSaveHistory({
@@ -116,23 +115,25 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   };
 
-  // 🚀 DIRECT BLOB DOWNLOAD (No new tabs, exact extension)
+  // 🚀 CORRECT EXTENSION BLOB DOWNLOAD (No wrong .pdf names)
   const handleDirectDownloadFile = async () => {
-    if (!fileDownloadUrl && !previewUrl) return;
+    const targetUrl = fileDownloadUrl || imageUrlResult;
+    if (!targetUrl) return;
     setIsDownloading(true);
 
     const formatChoice = inputValues['outputFormat'] || 'JPG';
     let ext = 'jpg';
-    if (formatChoice.includes('PNG')) ext = 'png';
-    else if (formatChoice.includes('TIFF')) ext = 'tiff';
-    else if (formatChoice.includes('Text')) ext = 'txt';
-    else if (isPDF) ext = 'pdf';
+    if (tool.id !== 'pdf-to-jpg') {
+      ext = 'pdf';
+    } else {
+      if (formatChoice.includes('PNG')) ext = 'png';
+      else if (formatChoice.includes('TIFF')) ext = 'tiff';
+    }
 
     const filename = `${tool.id}-output.${ext}`;
-    const targetUrl = fileDownloadUrl || previewUrl;
 
     try {
-      const response = await fetch(targetUrl!);
+      const response = await fetch(targetUrl);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       
@@ -145,7 +146,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       const link = document.createElement('a');
-      link.href = targetUrl!;
+      link.href = targetUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
@@ -155,7 +156,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   };
 
-  // Related Tools Finder (Like Adobe's "Give other tools a try")
   const relatedTools = allTools.filter(t => t.id !== tool.id && t.category === tool.category).slice(0, 4);
 
   return (
@@ -167,7 +167,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       </div>
 
       <div className="w-full px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
-        {/* BANNER */}
         <div className="bg-[#151517] border border-white/10 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-red-600/30 text-red-300 border border-red-500/40">Adobe Acrobat Style Engine</span>
@@ -178,13 +177,12 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* LEFT: PARAMETERS & FORMATS (ADOBE STYLE) */}
+          {/* LEFT SETTINGS */}
           <div className="lg:col-span-4 bg-[#151517] border border-white/10 rounded-lg p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <span className="text-xs font-bold uppercase text-red-400 flex items-center gap-1.5"><Sliders className="w-4 h-4" /> Conversion Settings</span>
             </div>
 
-            {/* FORMAT DROPDOWN */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-200 block">Convert to:</label>
               <select value={inputValues['outputFormat']} onChange={(e) => handleInputChange('outputFormat', e.target.value)} className="w-full px-3 py-2.5 bg-[#0A0A0A] border border-white/20 rounded text-xs text-white focus:border-red-500 font-bold">
@@ -205,7 +203,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               </div>
             ))}
 
-            {/* FILE UPLOAD BOX */}
             <div className="pt-3 border-t border-white/10 space-y-2">
               <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5 text-red-400" /> Upload Source PDF</span>
               {!uploadedFile ? (
@@ -222,14 +219,13 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               )}
             </div>
 
-            {/* EXECUTE / CONVERT BUTTON */}
             <button onClick={handleExecute} disabled={isRunning} className="w-full py-3.5 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-2 mt-4 shadow-lg shadow-red-600/20 transition-all cursor-pointer">
               {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-white" />}
               <span>{isRunning ? 'Converting File...' : `Convert to ${inputValues['outputFormat']?.split(' ')[0] || 'JPG'}`}</span>
             </button>
           </div>
 
-          {/* RIGHT: LIVE PREVIEW & ADOBE STYLE OUTPUT PANEL */}
+          {/* RIGHT LARGE PREVIEW & ADOBE WORKSPACE */}
           <div className="lg:col-span-8 bg-[#151517] border border-white/10 rounded-lg p-6 min-h-[620px] flex flex-col justify-between shadow-2xl">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-5">
@@ -239,7 +235,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 {executionTime && <span className="text-emerald-400 text-[11px] bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/20 font-bold">{executionTime}ms</span>}
               </div>
 
-              {/* 1. INITIAL UPLOAD STATE */}
               {!isRunning && !outputResult && uploadedFile && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-12 text-center min-h-[440px]">
                   <FileText className="w-16 h-16 text-red-500 mx-auto mb-3 animate-bounce" />
@@ -249,7 +244,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* 2. LIVE ADOBE STYLE PROGRESS BAR (0% - 100%) */}
               {isRunning && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-10 flex flex-col items-center justify-center min-h-[440px] space-y-6">
                   <div className="relative w-20 h-20 flex items-center justify-center">
@@ -270,18 +264,19 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* 3. SUCCESS PREVIEW & DOWNLOAD PANE */}
+              {/* 🚀 LARGE LIVE VIEWER & DOWNLOAD PANE */}
               {outputResult && !isRunning && (
-                <div className="space-y-4 w-full flex flex-col items-center justify-center bg-[#0A0A0A] border border-red-500/30 rounded-xl p-6 min-h-[400px] shadow-2xl">
-                  <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center border border-emerald-500/40">
-                    <Check className="w-6 h-6" />
-                  </div>
-                  <div className="text-center space-y-1">
-                    <h3 className="text-white font-extrabold text-lg">Your file is ready!</h3>
-                    <p className="text-slate-400 text-xs">Successfully processed via Adobe-Style Neural Engine.</p>
-                  </div>
+                <div className="space-y-4 w-full flex flex-col items-center justify-center bg-[#0A0A0A] border border-red-500/30 rounded-xl p-6 min-h-[440px] shadow-2xl">
+                  {imageUrlResult ? (
+                    <div className="w-full h-[360px] bg-black/40 rounded-lg overflow-hidden border border-white/10 flex items-center justify-center">
+                      <object data={imageUrlResult} type="application/pdf" className="w-full h-full bg-white">
+                        <iframe src={imageUrlResult} className="w-full h-full">
+                          <p className="text-xs text-slate-400 text-center p-4">Preview not supported.</p>
+                        </iframe>
+                      </object>
+                    </div>
+                  ) : null}
 
-                  {/* ADOBE STYLE BIG DOWNLOAD BUTTON */}
                   <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full max-w-md py-4 px-6 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-3 cursor-pointer shadow-xl shadow-red-600/30 transition-all">
                     {isDownloading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                     <span>{isDownloading ? 'Downloading File...' : `Download ${inputValues['outputFormat']?.split(' ')[0] || 'JPG'}`}</span>
@@ -290,7 +285,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               )}
             </div>
 
-            {/* 🚀 ADOBE STYLE "GIVE OTHER TOOLS A TRY" (RELATED TOOLS) */}
+            {/* "GIVE OTHER TOOLS A TRY" SECTION */}
             <div className="mt-6 pt-5 border-t border-white/10">
               <h4 className="text-[11px] font-extrabold uppercase text-slate-400 mb-3 tracking-wider">Give other tools a try. It's free.</h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
