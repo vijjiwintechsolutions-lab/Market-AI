@@ -62,7 +62,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   const [videoUrlResult, setVideoUrlResult] = useState<string | null>(null);
   const [audioUrlResult, setAudioUrlResult] = useState<string | null>(null);
   const [fileDownloadUrl, setFileDownloadUrl] = useState<string | null>(null);
-  const [videoPosterUrl, setVideoPosterUrl] = useState<string | null>(null);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [elapsedSec, setElapsedSec] = useState<number>(0);
@@ -78,7 +77,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     initial['quality'] = qualityOptions[0];
     setInputValues(initial);
     setOutputResult(null); setImageUrlResult(null); setVideoUrlResult(null); setAudioUrlResult(null); setFileDownloadUrl(null);
-    setVideoPosterUrl(null); setUploadedFile(null); setPreviewUrl(null);
+    setUploadedFile(null); setPreviewUrl(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (window.history && window.history.pushState) {
@@ -119,7 +118,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       if (res.success) {
         setProgressPercent(100);
         if (res.fileUrl) setFileDownloadUrl(res.fileUrl);
-        if (res.imageUrl) setImageUrlResult(res.imageUrl); // 🚀 Show image preview in right panel
+        if (res.imageUrl) setImageUrlResult(res.imageUrl);
 
         setOutputResult(res.textOutput || "File Ready!");
 
@@ -239,35 +238,45 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
             </button>
           </div>
 
-          <div className="lg:col-span-7 bg-[#151517] border border-white/10 rounded-lg p-5 min-h-[500px] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-              <span className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4" /> Live Output & Preview
-              </span>
+          <div className="lg:col-span-7 bg-[#151517] border border-white/10 rounded-lg p-5 min-h-[500px] flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+                <span className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4" /> Live Output & Preview
+                </span>
+              </div>
+
+              {!isRunning && !outputResult && uploadedFile && (
+                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-8 text-center min-h-[300px]">
+                  <Paperclip className="w-12 h-12 text-indigo-400 mx-auto mb-2" />
+                  <h3 className="text-white font-bold">{uploadedFile.name}</h3>
+                  <p className="text-slate-400 text-xs">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • Ready</p>
+                </div>
+              )}
+
+              {isRunning && (
+                <AIProcessingState tool={tool} currentStep="Processing Document..." progressPercent={progressPercent} elapsedSec={elapsedSec} inputValues={inputValues} uploadedFile={uploadedFile} />
+              )}
+
+              {/* 🚀 ROBUST LIVE PREVIEW OBJECT/EMBED FOR REAL PDF/IMAGES */}
+              {imageUrlResult && !isRunning && (
+                <div className="space-y-3 w-full flex flex-col items-center justify-center bg-[#0A0A0A] border border-white/10 rounded-lg p-3 min-h-[360px]">
+                  {uploadedFile?.type === 'application/pdf' ? (
+                    <object data={imageUrlResult} type="application/pdf" className="w-full h-[360px] rounded border border-white/10">
+                      <iframe src={imageUrlResult} className="w-full h-[360px]">
+                        <p className="text-xs text-slate-400">Preview not supported. Please download file.</p>
+                      </iframe>
+                    </object>
+                  ) : (
+                    <img src={imageUrlResult} alt="Processed Preview" className="max-h-[360px] w-auto object-contain rounded shadow-lg border border-white/10" />
+                  )}
+                  <p className="text-[11px] text-emerald-400 font-bold">✨ Live Document Preview Rendered Successfully</p>
+                </div>
+              )}
             </div>
 
-            {!isRunning && !outputResult && uploadedFile && (
-              <div className="flex-1 w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-8 text-center">
-                <Paperclip className="w-12 h-12 text-indigo-400 mx-auto mb-2" />
-                <h3 className="text-white font-bold">{uploadedFile.name}</h3>
-                <p className="text-slate-400 text-xs">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • Ready</p>
-              </div>
-            )}
-
-            {isRunning && (
-              <AIProcessingState tool={tool} currentStep="Processing Document..." progressPercent={progressPercent} elapsedSec={elapsedSec} inputValues={inputValues} uploadedFile={uploadedFile} />
-            )}
-
-            {/* 🚀 LIVE IMAGE PREVIEW IN RIGHT PANEL FOR CONVERTERS */}
-            {imageUrlResult && !isRunning && (
-              <div className="space-y-4 w-full flex-1 flex flex-col items-center justify-center bg-[#0A0A0A] border border-white/10 rounded-lg p-4">
-                <img src={imageUrlResult} alt="Converted Page Preview" className="max-h-[360px] w-auto object-contain rounded shadow-lg border border-white/10" />
-                <p className="text-[11px] text-emerald-400 font-bold">✨ Live Page Preview Rendered Successfully</p>
-              </div>
-            )}
-
             {outputResult && !isRunning && (
-              <div className="space-y-4 w-full flex flex-col mt-4">
+              <div className="space-y-3 w-full mt-4 pt-4 border-t border-white/10">
                 <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-all">
                   {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                   <span>{isDownloading ? 'Downloading...' : tool.id === 'pdf-to-jpg' ? 'Download Converted JPG' : 'Download Processed PDF'}</span>
