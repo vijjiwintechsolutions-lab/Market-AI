@@ -15,7 +15,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const url = req.url || '';
 
-  // 1. DIRECT DOWNLOAD PROXY
+  // 1. GET HEALTH CHECK ROUTE
+  if (req.method === 'GET' && url.includes('/api/health')) {
+    const hasApiKey = Boolean(process.env.GEMINI_API_KEY);
+    return res.status(200).json({
+      status: 'ok',
+      app: 'Neural Market AI Engine',
+      version: '8.0.0',
+      hasApiKey: hasApiKey,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // 2. DIRECT DOWNLOAD PROXY
   if (url.includes('/api/download')) {
     const requestUrl = new URL(req.url || '', `https://${req.headers.host || 'market-ai-bice.vercel.app'}`);
     const targetUrl = requestUrl.searchParams.get('url');
@@ -39,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // 2. LIVE AI EXECUTION ROUTER
+  // 3. LIVE AI EXECUTION ROUTER (POST REQUESTS)
   if (req.method === 'POST') {
     try {
       const body = req.body || {};
@@ -55,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const safePromptString = String(rawPrompt).replace(/[#?&/]/g, ' ').trim();
       const apiKey = process.env.GEMINI_API_KEY;
 
-      // --- TEXT / ANALYSIS ENGINE ---
+      // TEXT / ANALYSIS ENGINE
       if (url.includes('/api/ai/text') || url.includes('/api/ai/analyze')) {
         if (apiKey) {
           try {
@@ -78,13 +90,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         return res.status(200).json({
           success: true,
-          output: `### AI Generated Output\n\n**Processed Prompt:** "${safePromptString}"\n\n- Task completed in ${Date.now() - startTime}ms.\n- System Status: Operational.`,
+          output: `### AI Generated Output\n\n**Processed Prompt:** "${safePromptString}"\n\n- Task completed in ${Date.now() - startTime}ms.`,
           executionTimeMs: Date.now() - startTime,
           provider: 'Neural Smart Engine',
         });
       }
 
-      // --- ULTRA HD IMAGE AI ENGINE ---
+      // ULTRA HD IMAGE AI ENGINE
       if (url.includes('/api/ai/image')) {
         const selectedRatio = aspectRatio || inputs?.aspectRatio || '1:1';
         let width = 1024, height = 1024;
@@ -107,7 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // --- AUDIO / VOICE SPEECH SYNTHESIZER ENGINE ---
+      // AUDIO / VOICE SPEECH ENGINE
       if (url.includes('/api/ai/audio')) {
         const cleanText = encodeURIComponent(safePromptString.slice(0, 250));
         const speechUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${cleanText}&tl=en&client=tw-ob`;
@@ -122,7 +134,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // --- MOTION VIDEO AI ENGINE (NO MORE SINTEL MOVIE TRAILER) ---
+      // MOTION VIDEO AI ENGINE
       if (url.includes('/api/ai/video')) {
         const selectedRatio = aspectRatio || inputs?.aspectRatio || '16:9';
         let width = 1280, height = 720;
@@ -131,10 +143,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const cleanPrompt = encodeURIComponent(`cinematic motion capture of ${safePromptString}, 8k resolution, 60fps, fluid motion`);
         const frameSeed = Math.floor(Math.random() * 899999) + 100000;
 
-        // Prompt-Matched Ultra-HD Visual Frame
         const frameUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&model=flux&nologo=true&seed=${frameSeed}`;
 
-        // Prompt-specific Video MP4 Router
         let videoUrl = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
         const lowerP = safePromptString.toLowerCase();
         if (lowerP.includes('rain') || lowerP.includes('nature') || lowerP.includes('ocean') || lowerP.includes('water')) {
