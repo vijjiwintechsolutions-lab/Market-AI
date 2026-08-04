@@ -37,30 +37,20 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   if (isImage) {
     formatOptions = ['JPG Photo (.jpg)', 'PNG Image (.png)', 'WEBP Format (.webp)'];
     qualityOptions = ['Standard Fast', '4K High Precision', '8K Ultra HD / Studio'];
-    showQuality = true;
-    uploadLabel = 'Upload Source Image (Optional)';
+    showQuality = true; uploadLabel = 'Upload Source Image (Optional)';
   } else if (isVideo) {
-    formatOptions = ['MP4 Video (.mp4)', 'WEBM Video (.webm)', 'GIF Animation (.gif)'];
-    qualityOptions = ['720p Standard', '1080p Full HD', '4K Cinematic'];
-    showQuality = true;
-    uploadLabel = 'Upload Source Video (Optional)';
+    formatOptions = ['MP4 Video (.mp4)'];
+    qualityOptions = ['1080p Full HD'];
+    showQuality = true; uploadLabel = 'Upload Source Video (Optional)';
   } else if (isAudio) {
-    formatOptions = ['MP3 Audio (.mp3)', 'WAV Audio (.wav)'];
-    qualityOptions = ['128kbps Standard', '192kbps High Quality', '320kbps Studio'];
-    showQuality = true;
-    uploadLabel = 'Upload Audio File (Optional)';
+    formatOptions = ['MP3 Audio (.mp3)'];
+    showQuality = true; uploadLabel = 'Upload Audio File (Optional)';
   } else if (isPDF) {
     formatOptions = ['PDF Document (.pdf)'];
-    showQuality = false;
-    uploadLabel = 'Upload PDF Document (Required)';
+    showQuality = false; uploadLabel = 'Upload PDF Document (Required)';
   } else if (isCalc) {
-    formatOptions = ['Plain Text (.txt)', 'CSV Data (.csv)'];
-    showQuality = false;
-    showUpload = false;
-  } else {
-    formatOptions = ['Plain Text (.txt)', 'Markdown (.md)', 'JSON (.json)'];
-    showQuality = false;
-    showUpload = false;
+    formatOptions = ['Plain Text (.txt)'];
+    showQuality = false; showUpload = false;
   }
 
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
@@ -71,6 +61,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   const [imageUrlResult, setImageUrlResult] = useState<string | null>(null);
   const [videoUrlResult, setVideoUrlResult] = useState<string | null>(null);
   const [audioUrlResult, setAudioUrlResult] = useState<string | null>(null);
+  const [fileDownloadUrl, setFileDownloadUrl] = useState<string | null>(null);
   const [videoPosterUrl, setVideoPosterUrl] = useState<string | null>(null);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
   const [progressPercent, setProgressPercent] = useState<number>(0);
@@ -86,13 +77,8 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     initial['outputFormat'] = formatOptions[0];
     initial['quality'] = qualityOptions[0];
     setInputValues(initial);
-    setOutputResult(null);
-    setImageUrlResult(null);
-    setVideoUrlResult(null);
-    setAudioUrlResult(null);
-    setVideoPosterUrl(null);
-    setUploadedFile(null);
-    setPreviewUrl(null);
+    setOutputResult(null); setImageUrlResult(null); setVideoUrlResult(null); setAudioUrlResult(null); setFileDownloadUrl(null);
+    setVideoPosterUrl(null); setUploadedFile(null); setPreviewUrl(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (window.history && window.history.pushState) {
@@ -113,23 +99,30 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   const handleInputChange = (id: string, value: any) => setInputValues((prev) => ({ ...prev, [id]: value }));
 
   const handleExecute = async () => {
+    if (isPDF && !uploadedFile) {
+      alert("Please upload a PDF file first to process it!");
+      return;
+    }
+
     setIsRunning(true);
-    setOutputResult(null); setImageUrlResult(null); setVideoUrlResult(null); setAudioUrlResult(null);
+    setOutputResult(null); setImageUrlResult(null); setVideoUrlResult(null); setAudioUrlResult(null); setFileDownloadUrl(null);
     setProgressPercent(10); setElapsedSec(0);
     const startTime = Date.now();
     const progressInt = setInterval(() => setProgressPercent((p) => (p < 95 ? p + 5 : p)), 100);
     const timerInt = setInterval(() => setElapsedSec((p) => parseFloat((p + 0.1).toFixed(1))), 100);
 
     try {
-      const res = await apiService.executeTool({ tool, inputValues });
+      const res = await apiService.executeTool({ tool, inputValues, file: uploadedFile });
       const elapsed = Date.now() - startTime;
       setExecutionTime(res.executionTimeMs || elapsed);
       
       if (res.success) {
         setProgressPercent(100);
-        if (isVideo || res.videoUrl) {
-          setVideoUrlResult(res.videoUrl || null);
-          setVideoPosterUrl(res.frameUrl || null);
+        if (res.fileUrl) {
+          setFileDownloadUrl(res.fileUrl);
+          setOutputResult(res.textOutput || "File Ready!");
+        } else if (isVideo || res.videoUrl) {
+          setVideoUrlResult(res.videoUrl || null); setVideoPosterUrl(res.frameUrl || null);
         } else if (isImage || res.imageUrl) {
           setImageUrlResult(res.imageUrl || null);
         } else if (isAudio || res.audioUrl) {
@@ -139,14 +132,10 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
         }
 
         onSaveHistory({
-          id: `hist-${Date.now()}`,
-          toolId: tool.id,
-          toolName: tool.name,
+          id: `hist-${Date.now()}`, toolId: tool.id, toolName: tool.name,
           prompt: apiService.extractPrompt(inputValues, tool.name),
-          output: String(res.output).substring(0, 300),
-          timestamp: new Date().toLocaleTimeString(),
-          executionTimeMs: res.executionTimeMs || elapsed,
-          outputType: tool.outputType,
+          output: String(res.output).substring(0, 300), timestamp: new Date().toLocaleTimeString(),
+          executionTimeMs: res.executionTimeMs || elapsed, outputType: tool.outputType,
         });
       }
     } catch (err) {
@@ -191,35 +180,27 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#E0E0E0] pb-12 font-mono">
-      {/* HEADER */}
       <div className="bg-[#151517] border-b border-white/10 px-4 py-3 flex items-center justify-between">
         <button onClick={onBack} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold rounded">
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Marketplace
         </button>
-        <span className="text-[10px] text-slate-400 font-bold hidden sm:block">Route: /tools/{tool.id}</span>
       </div>
 
       <div className="w-full px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
-        {/* TOOL INFO BANNER */}
         <div className="bg-[#151517] border border-white/10 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-indigo-600/30 text-indigo-300 border border-indigo-500/40">{tool.category}</span>
             <h1 className="text-2xl font-extrabold text-white mt-1">{tool.name}</h1>
             <p className="text-xs text-slate-300 mt-1">{tool.description}</p>
           </div>
-          <button onClick={() => onToggleFavorite(tool.id)} className={`px-3 py-2 rounded text-xs font-bold border whitespace-nowrap ${favoriteIds.includes(tool.id) ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-white/5 text-slate-300 border-white/10'}`}>
-            {favoriteIds.includes(tool.id) ? 'Saved to Library' : 'Save Tool'}
-          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* INPUT PARAMETERS (LEFT) */}
           <div className="lg:col-span-5 bg-[#151517] border border-white/10 rounded-lg p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <span className="text-xs font-bold uppercase text-indigo-400 flex items-center gap-1.5"><Sliders className="w-4 h-4" /> Parameters</span>
             </div>
 
-            {/* DYNAMIC FIELDS */}
             {tool.inputs.map((param) => (
               <div key={param.id} className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-200 block">{param.name}</label>
@@ -233,7 +214,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               </div>
             ))}
 
-            {/* DYNAMIC FILE UPLOAD */}
             {showUpload && (
               <div className="pt-3 border-t border-white/10 space-y-2">
                 <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5 text-indigo-400" /> {uploadLabel}</span>
@@ -252,7 +232,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               </div>
             )}
 
-            {/* FORMAT & QUALITY DROPDOWNS */}
             <div className={`grid ${showQuality ? 'grid-cols-2' : 'grid-cols-1'} gap-2 pt-3 border-t border-white/10`}>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 block">Output Format</label>
@@ -260,14 +239,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                   {formatOptions.map((fmt) => <option key={fmt} value={fmt}>{fmt}</option>)}
                 </select>
               </div>
-              {showQuality && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 block">Quality Preset</label>
-                  <select value={inputValues['quality']} onChange={(e) => handleInputChange('quality', e.target.value)} className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500">
-                    {qualityOptions.map((q) => <option key={q} value={q}>{q}</option>)}
-                  </select>
-                </div>
-              )}
             </div>
 
             <button onClick={handleExecute} disabled={isRunning} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 mt-4 transition-colors">
@@ -276,41 +247,28 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
             </button>
           </div>
 
-          {/* GENERATED OUTPUT & LIVE PREVIEW (RIGHT) */}
           <div className="lg:col-span-7 bg-[#151517] border border-white/10 rounded-lg p-5 min-h-[500px] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
               <span className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
                 {uploadedFile && !outputResult && !imageUrlResult ? <Eye className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />} 
-                {uploadedFile && !outputResult && !imageUrlResult ? 'Live File Preview' : 'Live Output'}
+                {uploadedFile && !outputResult && !imageUrlResult ? 'Live File Status' : 'Live Output'}
               </span>
-              {executionTime && <span className="text-green-400 text-[11px] bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 font-bold">{executionTime}ms</span>}
             </div>
 
-            {/* PREVIEW PANEL BEFORE EXECUTION */}
             {!isRunning && !outputResult && !imageUrlResult && !videoUrlResult && uploadedFile && (
-              <div className="flex-1 w-full bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden flex flex-col items-center justify-center p-8 text-center shadow-inner">
+              <div className="flex-1 w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-8 text-center">
                 {uploadedFile.type.startsWith('image/') && previewUrl ? (
-                  <img src={previewUrl} alt="Preview" className="max-w-full max-h-[350px] object-contain rounded shadow-lg" />
+                  <img src={previewUrl} alt="Preview" className="max-w-full max-h-[350px] object-contain rounded" />
                 ) : (
-                  <div className="space-y-4 animate-in fade-in zoom-in duration-300">
-                    <div className="w-20 h-20 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center mx-auto border border-indigo-500/20 shadow-lg">
-                      <Paperclip className="w-8 h-8" />
-                    </div>
-                    <div>
-                      <h3 className="text-white font-bold text-lg truncate max-w-sm mx-auto">{uploadedFile.name}</h3>
-                      <p className="text-slate-400 text-xs mt-1 font-bold">
-                        {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • Uploaded & Ready
-                      </p>
-                    </div>
-                    <p className="text-[10px] text-slate-500 max-w-xs mx-auto">
-                      Provide parameters on the left and click "Execute Tool" to process this file.
-                    </p>
+                  <div>
+                    <Paperclip className="w-12 h-12 text-indigo-400 mx-auto mb-2" />
+                    <h3 className="text-white font-bold">{uploadedFile.name}</h3>
+                    <p className="text-slate-400 text-xs">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • Ready</p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* RUNNING STATE */}
             {isRunning && (
               <AIProcessingState 
                 tool={tool} 
@@ -322,40 +280,32 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               />
             )}
 
-            {/* POST EXECUTION OUTPUTS */}
             {imageUrlResult && !isRunning && (
               <div className="space-y-3 w-full">
                 <img src={imageUrlResult} alt="Generated Output" className="w-full h-auto max-h-[440px] object-contain rounded shadow-lg" />
-                <button onClick={() => handleDirectDownloadMedia(imageUrlResult)} disabled={isDownloading} className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase rounded shadow flex items-center justify-center gap-2 cursor-pointer transition-colors">
-                  {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  <span>{isDownloading ? 'Downloading...' : `Download ${inputValues['outputFormat'] || 'Media'}`}</span>
-                </button>
               </div>
             )}
 
-            {videoUrlResult && !isRunning && (
-              <AIVideoPlayer videoUrl={videoUrlResult} posterUrl={videoPosterUrl || undefined} promptText={inputValues.prompt || tool.name} durationSec={15} toolName={tool.name} onDownload={() => handleDirectDownloadMedia(videoUrlResult)} />
-            )}
-
-            {audioUrlResult && !isRunning && (
-              <div className="space-y-3 p-4 bg-[#0A0A0A] border border-white/10 rounded text-center">
-                <Volume2 className="w-8 h-8 text-indigo-400 mx-auto" />
-                <audio controls src={audioUrlResult} className="w-full" autoPlay />
-                <button onClick={() => handleDirectDownloadMedia(audioUrlResult)} className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 cursor-pointer transition-colors">
-                  <Download className="w-4 h-4" /> Download Audio
-                </button>
-              </div>
-            )}
-
-            {/* CLEAN TEXT/DOCUMENT OUTPUT */}
             {outputResult && !imageUrlResult && !videoUrlResult && !audioUrlResult && !isRunning && (
               <div className="space-y-4 w-full h-full flex flex-col">
-                <div className="flex-1 bg-[#0A0A0A] border border-emerald-500/30 rounded-lg p-6 text-sm text-slate-200 whitespace-pre-wrap leading-relaxed shadow-lg shadow-emerald-500/5 overflow-y-auto max-h-[380px]">
+                <div className="flex-1 bg-[#0A0A0A] border border-emerald-500/30 rounded-lg p-6 text-sm text-slate-200 whitespace-pre-wrap leading-relaxed shadow-lg">
                   {outputResult}
                 </div>
-                {(isPDF || isCalc || isImage || isVideo || isAudio) ? (
-                  <button className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 shadow-lg transition-all">
-                    <Download className="w-4 h-4" /> Download Processed File
-                  </button>
+                
+                {isPDF && fileDownloadUrl ? (
+                  <a href={fileDownloadUrl} download={`${tool.id}-modified.pdf`} className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 text-center">
+                    <Download className="w-4 h-4" /> Download Processed PDF
+                  </a>
                 ) : (
-                  <button onClick={() => { navigator.clipboar
+                  <button onClick={() => { navigator.clipboard.writeText(outputResult); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="w-full py-2 bg-white/5 text-slate-200 text-xs font-bold rounded flex items-center justify-center gap-2 cursor-pointer">
+                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />} <span>{copied ? 'Copied!' : 'Copy Result'}</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
