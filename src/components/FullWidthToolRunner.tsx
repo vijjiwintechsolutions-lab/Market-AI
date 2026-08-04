@@ -18,7 +18,7 @@ interface FullWidthToolRunnerProps {
   onToggleCompare: (tool: AITool) => void;
 }
 
-// 🚀 UNIVERSAL SMART PATTERN RESOLVER FOR ALL 800+ TOOLS
+// UNIVERSAL SMART PATTERN RESOLVER FOR ALL 800+ TOOLS
 export function resolveToolConfig(tool: AITool) {
   const name = (tool.name || '').toLowerCase();
   const id = (tool.id || '').toLowerCase();
@@ -35,8 +35,8 @@ export function resolveToolConfig(tool: AITool) {
   // 1. PDF TO WORD / DOC
   if (name.includes('word') || name.includes('doc') || id.includes('word') || id.includes('doc')) {
     showConvertDropdown = true;
-    formatOptions = ['Word Document (.docx)', 'Word Document (.doc)'];
-    defaultExt = 'docx';
+    formatOptions = ['Word Document (.doc)', 'Word Document (.docx)'];
+    defaultExt = 'doc';
     uploadLabel = 'Upload PDF Document';
     actionButtonText = 'Convert to Word';
   }
@@ -64,7 +64,7 @@ export function resolveToolConfig(tool: AITool) {
     uploadLabel = 'Upload PDF Document';
     actionButtonText = 'Convert to JPG';
   }
-  // 5. CONVERT TO PDF (WORD TO PDF, EXCEL TO PDF)
+  // 5. CONVERT TO PDF
   else if (name.includes('to pdf') || id.includes('to-pdf')) {
     showConvertDropdown = false;
     formatOptions = ['PDF Document (.pdf)'];
@@ -74,13 +74,13 @@ export function resolveToolConfig(tool: AITool) {
   }
   // 6. COMPRESS PDF
   else if (name.includes('compress') || name.includes('shrink') || id.includes('compress')) {
-    showConvertDropdown = false; // Hide "Convert to" dropdown
+    showConvertDropdown = false;
     formatOptions = ['PDF Document (.pdf)'];
     defaultExt = 'pdf';
     uploadLabel = 'Upload PDF to Compress';
     actionButtonText = 'Compress PDF';
   }
-  // 7. OTHER PDF OPERATIONS (ROTATE, DELETE, MERGE, SPLIT)
+  // 7. OTHER PDF OPERATIONS
   else if (cat.includes('pdf') || cat.includes('document')) {
     showConvertDropdown = false;
     formatOptions = ['PDF Document (.pdf)'];
@@ -249,6 +249,18 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
   const handleInputChange = (id: string, value: any) => setInputValues((prev) => ({ ...prev, [id]: value }));
 
+  // DYNAMICALLY DETECT SELECTED EXTENSION BASED ON DROPDOWN SELECTION
+  const selectedFormat = inputValues['outputFormat'] || (config.formatOptions.length > 0 ? config.formatOptions[0] : '');
+  let activeExt = config.defaultExt;
+  if (selectedFormat.includes('.doc') && !selectedFormat.includes('.docx')) activeExt = 'doc';
+  else if (selectedFormat.includes('.docx')) activeExt = 'docx';
+  else if (selectedFormat.includes('.xlsx')) activeExt = 'xlsx';
+  else if (selectedFormat.includes('.csv')) activeExt = 'csv';
+  else if (selectedFormat.includes('.png')) activeExt = 'png';
+  else if (selectedFormat.includes('.jpg') || selectedFormat.includes('.jpeg')) activeExt = 'jpg';
+  else if (selectedFormat.includes('.mp4')) activeExt = 'mp4';
+  else if (selectedFormat.includes('.mp3')) activeExt = 'mp3';
+
   const handleExecute = async () => {
     if (config.showUpload && !uploadedFile && isPDF) {
       alert("Please upload a source PDF file first!");
@@ -296,13 +308,13 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   };
 
-  // 🚀 DIRECT BLOB DOWNLOADER ENGINE WITH ACCURATE EXTENSIONS (.docx, .xlsx, .jpg, .pdf)
+  // DIRECT BLOB DOWNLOADER ENGINE WITH REAL-TIME ACTIVE EXTENSION
   const handleDirectDownloadFile = async () => {
-    const targetUrl = fileDownloadUrl || mediaResultUrl || uploadedPreviewUrl;
+    const targetUrl = fileDownloadUrl || mediaResultUrl;
     if (!targetUrl) return;
     setIsDownloading(true);
 
-    const filename = `${tool.id}-converted.${config.defaultExt}`;
+    const filename = `${tool.id}-converted.${activeExt}`;
 
     try {
       const response = await fetch(targetUrl);
@@ -394,7 +406,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 ) : (
                   <div className="p-2 bg-[#0A0A0A] border border-red-500/50 rounded flex items-center justify-between text-xs">
                     <span className="truncate text-white font-bold">{uploadedFile.name}</span>
-                    <button onClick={() => setUploadedFile(null)} className="text-rose-400 p-1 hover:bg-rose-500/20 rounded cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => { setUploadedFile(null); setFileDownloadUrl(null); setOutputResult(null); }} className="text-rose-400 p-1 hover:bg-rose-500/20 rounded cursor-pointer"><X className="w-3.5 h-3.5" /></button>
                   </div>
                 )}
               </div>
@@ -437,7 +449,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
               {!isRunning && !outputResult && !uploadedFile && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-12 text-center min-h-[400px]">
-                  {config.defaultExt === 'docx' ? <FileText className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
+                  {config.defaultExt === 'docx' || config.defaultExt === 'doc' ? <FileText className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
                    config.defaultExt === 'xlsx' ? <FileSpreadsheet className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
                    <FileText className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" />}
                   <h3 className="text-white font-bold text-sm">Ready for Processing</h3>
@@ -484,12 +496,12 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               )}
             </div>
 
-            {/* DIRECT DOWNLOAD BUTTON WITH SPECIFIC EXTENSION (.DOCX / .XLSX / .JPG) */}
-            {(fileDownloadUrl || mediaResultUrl || uploadedPreviewUrl) && !isRunning && (
+            {/* 🚀 DOWNLOAD BUTTON ENABLES ONLY AFTER CONVERSION IS FINISHED! */}
+            {!isRunning && (fileDownloadUrl || mediaResultUrl) && (
               <div className="mt-3 pt-3 border-t border-white/10">
                 <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full py-3.5 px-4 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-xl shadow-red-600/30 transition-all">
                   {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  <span>{isDownloading ? 'Downloading File...' : `Download Converted .${config.defaultExt.toUpperCase()} File`}</span>
+                  <span>{isDownloading ? 'Downloading File...' : `Download Converted .${activeExt.toUpperCase()} File`}</span>
                 </button>
               </div>
             )}
