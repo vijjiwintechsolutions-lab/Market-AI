@@ -187,6 +187,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* LEFT PARAMETERS */}
           <div className="lg:col-span-5 bg-[#151517] border border-white/10 rounded-lg p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <span className="text-xs font-bold uppercase text-indigo-400 flex items-center gap-1.5"><Sliders className="w-4 h-4" /> Parameters</span>
@@ -238,19 +239,22 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
             </button>
           </div>
 
-          <div className="lg:col-span-7 bg-[#151517] border border-white/10 rounded-lg p-5 min-h-[500px] flex flex-col justify-between">
+          {/* RIGHT LARGE PROFESSIONAL PREVIEW & OUTPUT */}
+          <div className="lg:col-span-7 bg-[#151517] border border-white/10 rounded-lg p-5 min-h-[580px] flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
                 <span className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4" /> Live Output & Preview
+                  <Sparkles className="w-4 h-4" /> Live Professional Preview Viewer
                 </span>
               </div>
 
+              {/* Initial Upload State */}
               {!isRunning && !outputResult && uploadedFile && (
-                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-8 text-center min-h-[300px]">
-                  <Paperclip className="w-12 h-12 text-indigo-400 mx-auto mb-2" />
-                  <h3 className="text-white font-bold">{uploadedFile.name}</h3>
-                  <p className="text-slate-400 text-xs">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • Ready</p>
+                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-12 text-center min-h-[440px]">
+                  <Paperclip className="w-16 h-16 text-indigo-400 mx-auto mb-3 animate-pulse" />
+                  <h3 className="text-white font-bold text-base">{uploadedFile.name}</h3>
+                  <p className="text-slate-400 text-xs mt-1">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • File Loaded & Ready</p>
+                  <p className="text-[11px] text-indigo-400 mt-4 bg-indigo-500/10 px-3 py-1 rounded border border-indigo-500/20">Click "Execute Tool" to process and view large preview</p>
                 </div>
               )}
 
@@ -258,26 +262,29 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 <AIProcessingState tool={tool} currentStep="Processing Document..." progressPercent={progressPercent} elapsedSec={elapsedSec} inputValues={inputValues} uploadedFile={uploadedFile} />
               )}
 
-              {/* 🚀 ROBUST LIVE PREVIEW OBJECT/EMBED FOR REAL PDF/IMAGES */}
+              {/* 🚀 LARGE PROFESSIONAL PREVIEW PANE (Like Smallpdf/Adobe) */}
               {imageUrlResult && !isRunning && (
-                <div className="space-y-3 w-full flex flex-col items-center justify-center bg-[#0A0A0A] border border-white/10 rounded-lg p-3 min-h-[360px]">
+                <div className="space-y-3 w-full flex flex-col items-center justify-center bg-[#0A0A0A] border border-white/10 rounded-xl p-4 min-h-[440px] shadow-2xl">
                   {uploadedFile?.type === 'application/pdf' ? (
-                    <object data={imageUrlResult} type="application/pdf" className="w-full h-[360px] rounded border border-white/10">
-                      <iframe src={imageUrlResult} className="w-full h-[360px]">
-                        <p className="text-xs text-slate-400">Preview not supported. Please download file.</p>
+                    <object data={imageUrlResult} type="application/pdf" className="w-full h-[420px] rounded-lg border border-white/10 bg-white">
+                      <iframe src={imageUrlResult} className="w-full h-[420px] rounded-lg">
+                        <p className="text-xs text-slate-400 text-center p-4">Preview not supported. Please use the download button below.</p>
                       </iframe>
                     </object>
                   ) : (
-                    <img src={imageUrlResult} alt="Processed Preview" className="max-h-[360px] w-auto object-contain rounded shadow-lg border border-white/10" />
+                    <img src={imageUrlResult} alt="Large Processed Preview" className="max-h-[420px] w-full object-contain rounded-lg shadow-2xl border border-white/10 bg-black/40" />
                   )}
-                  <p className="text-[11px] text-emerald-400 font-bold">✨ Live Document Preview Rendered Successfully</p>
+                  <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold pt-1">
+                    <Check className="w-4 h-4" /> Ready for Secure Direct Download
+                  </div>
                 </div>
               )}
             </div>
 
+            {/* DIRECT DOWNLOAD BUTTON AT BOTTOM */}
             {outputResult && !isRunning && (
               <div className="space-y-3 w-full mt-4 pt-4 border-t border-white/10">
-                <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-all">
+                <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-xl transition-all">
                   {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                   <span>{isDownloading ? 'Downloading...' : tool.id === 'pdf-to-jpg' ? 'Download Converted JPG' : 'Download Processed PDF'}</span>
                 </button>
