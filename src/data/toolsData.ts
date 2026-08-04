@@ -10,7 +10,7 @@ export const CATEGORIES_LIST: ToolCategory[] = [
   'Text & Marketing Tools'
 ];
 
-// 1. CORE REAL UNIQUE TOOLS (NO "MODULE" DUMMIES)
+// 1. CORE REAL UNIQUE TOOLS
 const UNIQUE_CORE_TOOLS: AITool[] = [
   // --- NON-AI MEDIA UTILITIES ---
   {
@@ -68,6 +68,24 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
     description: 'Delete specific pages, reorder pages, or insert new pages into your PDF instantly.',
     inputs: [
       { id: 'pagesToRemove', name: 'Page Numbers to Remove (e.g. 2, 4, 7-10)', type: 'text', required: true, defaultValue: '2, 5' }
+    ],
+    outputType: 'text'
+  },
+  {
+    id: 'pdf-word-editor',
+    name: 'PDF & Word Document Editor',
+    category: 'PDF & Document Tools',
+    subcategory: 'Document Suite',
+    provider: 'DocuCraft Engine',
+    modelUsed: 'docu-edit-v1',
+    rating: 4.8,
+    reviewCount: 3100,
+    latencyMs: 40,
+    pricing: 'Free',
+    badge: 'Popular',
+    description: 'Edit text, modify layouts, and convert Word documents to PDF seamlessly.',
+    inputs: [
+      { id: 'prompt', name: 'Editing Instructions / Text Update', type: 'textarea', required: true, defaultValue: 'Update header title and modify paragraph margins' }
     ],
     outputType: 'text'
   },
@@ -189,7 +207,7 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
   }
 ];
 
-// GENERATE 800+ REAL NAMED TOOLS WITH ZERO "MODULE #1" DUMMY NAMES
+// GENERATE 800+ DIVERSE ORIGINAL NAMED TOOLS (ZERO "MODULE #1" DUMMIES)
 function buildFull800OriginalTools(): AITool[] {
   const catalog: AITool[] = [...UNIQUE_CORE_TOOLS];
 
@@ -203,9 +221,9 @@ function buildFull800OriginalTools(): AITool[] {
       sub: 'Document Suite',
       out: 'text',
       names: [
-        'PDF Word Editor', 'PDF Watermark Remover', 'PDF Merger Pro', 'PDF Compressor',
+        'PDF Watermark Remover', 'PDF Merger Pro', 'PDF Compressor',
         'PDF to Excel Converter', 'PDF Text Extractor', 'DocX to PDF Converter',
-        'PDF Page Numberer', 'PDF OCR Reader', 'EPUB to PDF Converter'
+        'PDF Page Numberer', 'PDF OCR Reader', 'EPUB to PDF Converter', 'PDF Legal Clause Auditor'
       ]
     },
     {
@@ -215,7 +233,7 @@ function buildFull800OriginalTools(): AITool[] {
       names: [
         'SIP Return Calculator', 'GST & Tax Calculator', 'Compound Interest Calculator',
         'FD Interest Calculator', 'Income Tax Slab Calculator', 'Currency Converter',
-        'Mortgage Affordability Calculator', 'Crypto Profit Calculator'
+        'Mortgage Affordability Calculator', 'Crypto Profit Calculator', 'RD Maturity Calculator', 'Inflation Rate Calculator'
       ]
     },
     {
@@ -224,7 +242,7 @@ function buildFull800OriginalTools(): AITool[] {
       out: 'audio',
       names: [
         'Audio Volume Booster', 'MP3 Converter', 'Vocal Remover', 'Audio Pitch Shifter',
-        'Audio Reverse Effect', 'Background Noise Cleaner', 'Audio Joiner & Merger'
+        'Audio Reverse Effect', 'Background Noise Cleaner', 'Audio Joiner & Merger', 'Karaoke Track Generator'
       ]
     },
     {
@@ -233,7 +251,7 @@ function buildFull800OriginalTools(): AITool[] {
       out: 'video',
       names: [
         'Video Speed Changer', 'Video Watermark Adder', 'MP4 to GIF Converter',
-        'Video Muter', 'Video Resolution Resizer', 'Video Frame Rate Converter'
+        'Video Muter', 'Video Resolution Resizer', 'Video Frame Rate Converter', 'Video Subtitle Embedder'
       ]
     },
     {
@@ -242,7 +260,25 @@ function buildFull800OriginalTools(): AITool[] {
       out: 'image',
       names: [
         'PNG to JPG Converter', 'Image Resizer & Crop', 'Image Compressor Pro',
-        'Photo Watermark Remover', 'Blur Effect Tool', 'Passport Photo Maker'
+        'Photo Watermark Remover', 'Blur Effect Tool', 'Passport Photo Maker', 'Color Palette Extractor'
+      ]
+    },
+    {
+      cat: 'Coding & Web Tools',
+      sub: 'Developer Utilities',
+      out: 'code',
+      names: [
+        'JSON Formatter & Validator', 'SQL Query Optimizer', 'React Component Generator',
+        'CSS Minifier & Unminifier', 'Base64 Encoder & Decoder', 'HTML to Tailwind Converter', 'Regex Tester Pro'
+      ]
+    },
+    {
+      cat: 'Text & Marketing Tools',
+      sub: 'Copywriting & Content',
+      out: 'text',
+      names: [
+        'SEO Article Generator', 'Social Media Hashtag Creator', 'Email Subject Line Enhancer',
+        'Grammar & Style Fixer', 'Word & Character Counter', 'Case Converter Pro', 'Lorem Ipsum Generator'
       ]
     }
   ];
@@ -254,7 +290,7 @@ function buildFull800OriginalTools(): AITool[] {
       functionalPrefixes.forEach((prefix) => {
         catalog.push({
           id: `tool-${counter++}`,
-          name: `${prefix} ${baseName}`, // Real tool name like "Fast PDF Word Editor", "Pro Loan Calculator"
+          name: `${prefix} ${baseName}`,
           category: group.cat as ToolCategory,
           subcategory: group.sub,
           provider: 'Neural Utility Engine',
@@ -263,9 +299,9 @@ function buildFull800OriginalTools(): AITool[] {
           reviewCount: Math.floor(200 + Math.random() * 8000),
           latencyMs: Math.floor(10 + Math.random() * 80),
           pricing: 'Free',
-          description: `A fast utility tool for ${baseName.toLowerCase()} tasks with browser-native execution and instant download options.`,
+          description: `A fast utility tool for ${baseName.toLowerCase()} operations with browser-native execution and instant download options.`,
           inputs: [
-            { id: 'prompt', name: 'Task Specification / File Input', type: 'textarea', required: true, defaultValue: `Execute ${baseName} operation` }
+            { id: 'prompt', name: 'Task Specification / Inputs', type: 'textarea', required: true, defaultValue: `Execute ${baseName} operation` }
           ],
           outputType: group.out as any
         });
