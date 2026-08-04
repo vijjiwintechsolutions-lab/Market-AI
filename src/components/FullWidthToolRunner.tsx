@@ -31,26 +31,49 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   const isCalc = cat.includes('calc') || cat.includes('finance');
   const isCode = cat.includes('code') || cat.includes('web');
 
-  // Dynamic Formats per Tool Type
-  let formatOptions = ['Plain Text (.txt)', 'Markdown (.md)', 'JSON (.json)'];
+  // 🚀 DYNAMIC TOOL-SPECIFIC FORMATS & BUTTON LABELS FIX
+  let formatOptions: string[] = [];
+  let showFormatDropdown = true;
   let uploadLabel = 'Source File / Reference Media';
   let showUpload = true;
+  let actionButtonLabel = `Execute ${tool.name}`;
 
-  if (isPDF) {
-    formatOptions = tool.id === 'pdf-to-jpg' ? ['JPG Image (*.jpg)', 'PNG Image (*.png)', 'TIFF (*.tiff)'] : ['PDF Document (.pdf)'];
-    uploadLabel = 'Upload Source PDF / Image Document';
+  if (tool.id === 'pdf-to-jpg') {
+    formatOptions = ['JPG Image (*.jpg)', 'PNG Image (*.png)', 'TIFF (*.tiff)'];
+    uploadLabel = 'Upload PDF to Convert';
+    actionButtonLabel = 'Convert to JPG';
+  } else if (tool.id === 'compress-pdf') {
+    showFormatDropdown = false; // ❌ Hide "Convert to" dropdown for Compress PDF!
+    uploadLabel = 'Upload PDF to Compress';
+    actionButtonLabel = 'Compress PDF';
+  } else if (tool.id === 'rotate-pdf') {
+    showFormatDropdown = false;
+    uploadLabel = 'Upload PDF to Rotate';
+    actionButtonLabel = 'Rotate PDF';
+  } else if (tool.id === 'delete-pdf-pages') {
+    showFormatDropdown = false;
+    uploadLabel = 'Upload PDF Document';
+    actionButtonLabel = 'Delete Selected Pages';
+  } else if (isPDF) {
+    formatOptions = ['PDF Document (.pdf)'];
+    uploadLabel = 'Upload Source PDF Document';
+    actionButtonLabel = tool.name;
   } else if (isImage) {
     formatOptions = ['JPG Photo (.jpg)', 'PNG Image (.png)', 'WEBP Format (.webp)'];
     uploadLabel = 'Upload Source Image';
+    actionButtonLabel = tool.name;
   } else if (isVideo) {
     formatOptions = ['MP4 Video (.mp4)', 'WEBM Video (.webm)', 'GIF Animation (.gif)'];
     uploadLabel = 'Upload Source Video Clip';
+    actionButtonLabel = tool.name;
   } else if (isAudio) {
     formatOptions = ['MP3 Audio (.mp3)', 'WAV Audio (.wav)'];
     uploadLabel = 'Upload Source Audio File';
+    actionButtonLabel = tool.name;
   } else if (isCalc || isCode) {
     showUpload = false;
-    formatOptions = isCode ? ['JSON (.json)', 'JavaScript (.js)', 'Python (.py)'] : ['CSV Data (.csv)', 'Financial Report (.txt)'];
+    showFormatDropdown = false;
+    actionButtonLabel = tool.name;
   }
 
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
@@ -77,7 +100,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   useEffect(() => {
     const initial: Record<string, any> = {};
     tool.inputs.forEach((p) => { initial[p.id] = p.defaultValue || ''; });
-    initial['outputFormat'] = formatOptions[0];
+    if (formatOptions.length > 0) initial['outputFormat'] = formatOptions[0];
     setInputValues(initial);
     setOutputResult(null); setFileDownloadUrl(null); setMediaResultUrl(null);
     setUploadedFile(null); setUploadedPreviewUrl(null);
@@ -89,7 +112,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   }, [tool.id]);
 
-  // Handle uploaded file Object URL for immediate preview
   useEffect(() => {
     if (uploadedFile) {
       const url = URL.createObjectURL(uploadedFile);
@@ -100,12 +122,12 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   }, [uploadedFile]);
 
-  // SMART PDF CANVAS VIEWER ENGINE (ONLY RUNS IF ACTUAL PDF FILE)
+  // PDF Canvas Viewer Engine
   useEffect(() => {
     if (!uploadedFile) return;
 
     const isActualPdf = uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf');
-    if (!isActualPdf) return; // Do not attempt PDF.js on JPG/PNG files!
+    if (!isActualPdf) return;
 
     const renderPdfPage = async () => {
       try {
@@ -191,21 +213,16 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   };
 
-  // Direct Blob Downloader Engine
   const handleDirectDownloadFile = async () => {
     const targetUrl = fileDownloadUrl || mediaResultUrl || uploadedPreviewUrl;
     if (!targetUrl) return;
     setIsDownloading(true);
 
-    const formatChoice = inputValues['outputFormat'] || 'TXT';
-    let ext = 'txt';
-    if (formatChoice.includes('JPG') || (isImage && !formatChoice.includes('PNG'))) ext = 'jpg';
-    else if (formatChoice.includes('PNG')) ext = 'png';
-    else if (formatChoice.includes('MP4') || isVideo) ext = 'mp4';
-    else if (formatChoice.includes('MP3') || isAudio) ext = 'mp3';
-    else if (formatChoice.includes('CSV')) ext = 'csv';
-    else if (formatChoice.includes('JSON')) ext = 'json';
-    else if (isPDF && tool.id !== 'pdf-to-jpg') ext = 'pdf';
+    let ext = 'pdf';
+    if (tool.id === 'pdf-to-jpg') ext = 'jpg';
+    else if (isImage) ext = 'jpg';
+    else if (isVideo) ext = 'mp4';
+    else if (isAudio) ext = 'mp3';
 
     const filename = `${tool.id}-output.${ext}`;
 
@@ -258,18 +275,21 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           
-          {/* LEFT CONVERSION & TOOL OPTIONS */}
+          {/* LEFT OPTIONS */}
           <div className="lg:col-span-4 bg-[#151517] border border-white/10 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <span className="text-xs font-bold uppercase text-red-400 flex items-center gap-1.5"><Sliders className="w-3.5 h-3.5" /> Options</span>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-200 block">Convert to:</label>
-              <select value={inputValues['outputFormat']} onChange={(e) => handleInputChange('outputFormat', e.target.value)} className="w-full px-2.5 py-2 bg-[#0A0A0A] border border-white/20 rounded text-xs text-white focus:border-red-500 font-bold">
-                {formatOptions.map((fmt) => <option key={fmt} value={fmt}>{fmt}</option>)}
-              </select>
-            </div>
+            {/* Conditionally Render Output Format Dropdown */}
+            {showFormatDropdown && formatOptions.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-200 block">Convert to:</label>
+                <select value={inputValues['outputFormat']} onChange={(e) => handleInputChange('outputFormat', e.target.value)} className="w-full px-2.5 py-2 bg-[#0A0A0A] border border-white/20 rounded text-xs text-white focus:border-red-500 font-bold">
+                  {formatOptions.map((fmt) => <option key={fmt} value={fmt}>{fmt}</option>)}
+                </select>
+              </div>
+            )}
 
             {tool.inputs.map((param) => (
               <div key={param.id} className="space-y-1">
@@ -304,14 +324,13 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
             <button onClick={handleExecute} disabled={isRunning} className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-red-600/20 transition-all cursor-pointer">
               {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-white" />}
-              <span>{isRunning ? 'Processing...' : 'Execute Tool'}</span>
+              <span>{isRunning ? 'Processing...' : actionButtonLabel}</span>
             </button>
           </div>
 
-          {/* RIGHT INTERACTIVE WORKSPACE */}
+          {/* RIGHT WORKSPACE */}
           <div className="lg:col-span-8 bg-[#151517] border border-white/10 rounded-lg p-4 min-h-[560px] flex flex-col justify-between shadow-2xl">
             <div>
-              {/* INTERACTIVE VIEWER TOOLBAR */}
               <div className="flex flex-wrap items-center justify-between pb-2 border-b border-white/10 mb-3 gap-2 bg-[#0A0A0A] p-2 rounded-lg border border-white/5">
                 <span className="text-xs font-bold text-red-400 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" /> Live Interactive Viewer
@@ -338,7 +357,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 )}
               </div>
 
-              {/* 1. NO FILE UPLOADED INITIAL STATE */}
               {!isRunning && !outputResult && !uploadedFile && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-12 text-center min-h-[400px]">
                   {isPDF ? <FileText className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
@@ -348,11 +366,11 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                    isCode ? <Code className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
                    <Calculator className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" />}
                   <h3 className="text-white font-bold text-sm">Ready for Processing</h3>
-                  <p className="text-slate-400 text-xs mt-1">Upload a file or configure options on the left and click "Execute Tool".</p>
+                  <p className="text-slate-400 text-xs mt-1">Upload a file or configure options on the left and click "{actionButtonLabel}".</p>
                 </div>
               )}
 
-              {/* 2. CIRCULAR PROGRESS BAR */}
+              {/* PROGRESS BAR */}
               {isRunning && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-8 flex flex-col items-center justify-center min-h-[400px] space-y-4">
                   <div className="relative w-16 h-16 flex items-center justify-center">
@@ -372,7 +390,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* 3. PDF CANVAS VIEWER (ONLY FOR ACTUAL PDF) */}
+              {/* PDF CANVAS VIEWER */}
               {isUploadedPdf && !isRunning && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center overflow-auto min-h-[400px] max-h-[460px]">
                   <canvas ref={canvasRef} className="max-w-full shadow-2xl rounded border border-white/10 bg-white" />
@@ -380,7 +398,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* 4. IMAGE UPLOAD / CONVERTED IMAGE LIVE PREVIEW (CRITICAL FIX FOR IMAGE UPLOADS) */}
+              {/* IMAGE UPLOAD PREVIEW */}
               {uploadedFile && !isUploadedPdf && !isRunning && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center min-h-[400px] max-h-[460px]">
                   <img src={mediaResultUrl || uploadedPreviewUrl || ''} alt="Uploaded / Result Preview" className="max-h-[380px] w-auto object-contain rounded-lg border border-white/10 shadow-2xl" />
@@ -388,7 +406,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* 5. MEDIA RESULT PREVIEW (FOR GENERATED IMAGE/AUDIO/VIDEO) */}
+              {/* MEDIA PREVIEW */}
               {!uploadedFile && mediaResultUrl && !isRunning && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center min-h-[400px]">
                   {isImage ? (
@@ -401,7 +419,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* 6. TEXT / CODE / CALC OUTPUT VIEWER */}
+              {/* TEXT / CODE OUTPUT VIEWER */}
               {outputResult && !isUploadedPdf && !mediaResultUrl && !isRunning && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-4 min-h-[400px] max-h-[440px] overflow-y-auto text-xs font-mono text-slate-200 leading-relaxed whitespace-pre-wrap relative">
                   <button onClick={() => { navigator.clipboard.writeText(outputResult); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="absolute top-3 right-3 px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-[10px] font-bold text-slate-300 flex items-center gap-1 cursor-pointer">
@@ -412,7 +430,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               )}
             </div>
 
-            {/* 🚀 DIRECT DOWNLOAD BUTTON (PROMINENTLY DISPLAYED WHENEVER FILE IS READY OR UPLOADED) */}
+            {/* DIRECT DOWNLOAD BUTTON */}
             {(fileDownloadUrl || mediaResultUrl || uploadedPreviewUrl) && !isRunning && (
               <div className="mt-3 pt-3 border-t border-white/10">
                 <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full py-3.5 px-4 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-xl shadow-red-600/30 transition-all">
@@ -422,7 +440,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               </div>
             )}
 
-            {/* RELATED TOOLS SECTION */}
+            {/* RELATED TOOLS */}
             <div className="mt-4 pt-3 border-t border-white/10">
               <h4 className="text-[10px] font-extrabold uppercase text-slate-400 mb-2 tracking-wider">Give other tools a try. It's free.</h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
