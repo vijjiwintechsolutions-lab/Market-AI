@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  ArrowLeft, Play, Sparkles, Copy, Check, Download, RefreshCw, Sliders, UploadCloud, X, Paperclip, Volume2, Eye
+  ArrowLeft, Play, Sparkles, Check, Download, RefreshCw, Sliders, UploadCloud, X, Paperclip, FileText, Edit3, Minimize2, Merge, Layers
 } from 'lucide-react';
 import { AITool, ExecutionHistoryItem } from '../types';
 import { apiService } from '../services/apiService';
 import { AIProcessingState } from './AIProcessingState';
-import { AIVideoPlayer } from './AIVideoPlayer';
 
 interface FullWidthToolRunnerProps {
   tool: AITool;
@@ -20,52 +19,24 @@ interface FullWidthToolRunnerProps {
 }
 
 export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
-  tool, onBack, onSaveHistory, favoriteIds, onToggleFavorite,
+  tool, onBack, onSaveHistory, favoriteIds, onToggleFavorite, onSelectTool, allTools
 }) => {
   const isImage = tool.outputType === 'image' || tool.category?.toLowerCase().includes('image');
-  const isVideo = tool.outputType === 'video' || tool.category?.toLowerCase().includes('video');
-  const isAudio = tool.outputType === 'audio' || tool.category?.toLowerCase().includes('audio') || tool.category?.toLowerCase().includes('voice');
   const isPDF = tool.category?.toLowerCase().includes('pdf') || tool.category?.toLowerCase().includes('document');
-  const isCalc = tool.category?.toLowerCase().includes('calc') || tool.category?.toLowerCase().includes('finance');
 
-  let formatOptions = ['Plain Text (.txt)'];
-  let qualityOptions = ['Standard Fast'];
-  let showQuality = false;
-  let showUpload = true;
-  let uploadLabel = 'Source File / Reference Media';
-
-  if (isImage) {
-    formatOptions = ['JPG Photo (.jpg)', 'PNG Image (.png)', 'WEBP Format (.webp)'];
-    qualityOptions = ['Standard Fast', '4K High Precision', '8K Ultra HD / Studio'];
-    showQuality = true; uploadLabel = 'Upload Source Image (Optional)';
-  } else if (isVideo) {
-    formatOptions = ['MP4 Video (.mp4)'];
-    qualityOptions = ['1080p Full HD'];
-    showQuality = true; uploadLabel = 'Upload Source Video (Optional)';
-  } else if (isAudio) {
-    formatOptions = ['MP3 Audio (.mp3)'];
-    showQuality = true; uploadLabel = 'Upload Audio File (Optional)';
-  } else if (isPDF) {
-    formatOptions = tool.id === 'pdf-to-jpg' ? ['JPG Image (.jpg)', 'ZIP Package (.zip)'] : ['PDF Document (.pdf)'];
-    showQuality = false; uploadLabel = 'Upload PDF Document (Required)';
-  } else if (isCalc) {
-    formatOptions = ['Plain Text (.txt)'];
-    showQuality = false; showUpload = false;
-  }
+  // 🚀 ADOBE-STYLE DYNAMIC FORMATS (JPG, PNG, TIFF)
+  let formatOptions = ['JPG (*.jpg, *.jpeg)', 'PNG (*.png)', 'TIFF (*.tiff)'];
+  if (!isPDF && !isImage) formatOptions = ['Plain Text (.txt)', 'PDF Document (.pdf)'];
 
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [outputResult, setOutputResult] = useState<string | null>(null);
-  const [imageUrlResult, setImageUrlResult] = useState<string | null>(null);
-  const [videoUrlResult, setVideoUrlResult] = useState<string | null>(null);
-  const [audioUrlResult, setAudioUrlResult] = useState<string | null>(null);
   const [fileDownloadUrl, setFileDownloadUrl] = useState<string | null>(null);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [elapsedSec, setElapsedSec] = useState<number>(0);
-  const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,9 +45,8 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     const initial: Record<string, any> = {};
     tool.inputs.forEach((p) => { initial[p.id] = p.defaultValue || ''; });
     initial['outputFormat'] = formatOptions[0];
-    initial['quality'] = qualityOptions[0];
     setInputValues(initial);
-    setOutputResult(null); setImageUrlResult(null); setVideoUrlResult(null); setAudioUrlResult(null); setFileDownloadUrl(null);
+    setOutputResult(null); setFileDownloadUrl(null);
     setUploadedFile(null); setPreviewUrl(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -97,56 +67,72 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
   const handleInputChange = (id: string, value: any) => setInputValues((prev) => ({ ...prev, [id]: value }));
 
+  // 🚀 ADOBE-STYLE LIVE EXECUTION WITH PROGRESS BAR ANIMATION
   const handleExecute = async () => {
     if (isPDF && !uploadedFile) {
-      alert("Please upload a PDF file first to process it!");
+      alert("Please upload a PDF file first to convert!");
       return;
     }
 
     setIsRunning(true);
-    setOutputResult(null); setImageUrlResult(null); setVideoUrlResult(null); setAudioUrlResult(null); setFileDownloadUrl(null);
-    setProgressPercent(10); setElapsedSec(0);
+    setOutputResult(null); setFileDownloadUrl(null);
+    setProgressPercent(0); setElapsedSec(0);
     const startTime = Date.now();
-    const progressInt = setInterval(() => setProgressPercent((p) => (p < 95 ? p + 5 : p)), 100);
+
+    // Smooth Live Progress Bar Simulator (Like Adobe Acrobat 0% to 100%)
+    const progressInt = setInterval(() => {
+      setProgressPercent((p) => (p < 92 ? p + Math.floor(Math.random() * 12) + 5 : p));
+    }, 120);
     const timerInt = setInterval(() => setElapsedSec((p) => parseFloat((p + 0.1).toFixed(1))), 100);
 
     try {
       const res = await apiService.executeTool({ tool, inputValues, file: uploadedFile });
+      clearInterval(progressInt);
+      setProgressPercent(100); // 100% Complete!
+      
       const elapsed = Date.now() - startTime;
       setExecutionTime(res.executionTimeMs || elapsed);
       
-      if (res.success) {
-        setProgressPercent(100);
-        if (res.fileUrl) setFileDownloadUrl(res.fileUrl);
-        if (res.imageUrl) setImageUrlResult(res.imageUrl);
+      setTimeout(() => {
+        if (res.success) {
+          if (res.fileUrl) setFileDownloadUrl(res.fileUrl);
+          setOutputResult(res.textOutput || "File Ready!");
 
-        setOutputResult(res.textOutput || "File Ready!");
+          onSaveHistory({
+            id: `hist-${Date.now()}`, toolId: tool.id, toolName: tool.name,
+            prompt: apiService.extractPrompt(inputValues, tool.name),
+            output: String(res.output).substring(0, 300), timestamp: new Date().toLocaleTimeString(),
+            executionTimeMs: res.executionTimeMs || elapsed, outputType: tool.outputType,
+          });
+        }
+        setIsRunning(false);
+      }, 400);
 
-        onSaveHistory({
-          id: `hist-${Date.now()}`, toolId: tool.id, toolName: tool.name,
-          prompt: apiService.extractPrompt(inputValues, tool.name),
-          output: String(res.output).substring(0, 300), timestamp: new Date().toLocaleTimeString(),
-          executionTimeMs: res.executionTimeMs || elapsed, outputType: tool.outputType,
-        });
-      }
     } catch (err) {
-      console.error(err);
+      clearInterval(progressInt);
+      setIsRunning(false);
     } finally {
-      clearInterval(progressInt); clearInterval(timerInt); setIsRunning(false);
+      clearInterval(timerInt);
     }
   };
 
+  // 🚀 DIRECT BLOB DOWNLOAD (No new tabs, exact extension)
   const handleDirectDownloadFile = async () => {
-    const downloadTarget = fileDownloadUrl || imageUrlResult;
-    if (!downloadTarget) return;
+    if (!fileDownloadUrl && !previewUrl) return;
     setIsDownloading(true);
 
-    let ext = 'pdf';
-    if (tool.id === 'pdf-to-jpg') ext = 'jpg';
+    const formatChoice = inputValues['outputFormat'] || 'JPG';
+    let ext = 'jpg';
+    if (formatChoice.includes('PNG')) ext = 'png';
+    else if (formatChoice.includes('TIFF')) ext = 'tiff';
+    else if (formatChoice.includes('Text')) ext = 'txt';
+    else if (isPDF) ext = 'pdf';
+
     const filename = `${tool.id}-output.${ext}`;
+    const targetUrl = fileDownloadUrl || previewUrl;
 
     try {
-      const response = await fetch(downloadTarget);
+      const response = await fetch(targetUrl!);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       
@@ -159,7 +145,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       const link = document.createElement('a');
-      link.href = downloadTarget;
+      link.href = targetUrl!;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
@@ -168,6 +154,9 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       setIsDownloading(false);
     }
   };
+
+  // Related Tools Finder (Like Adobe's "Give other tools a try")
+  const relatedTools = allTools.filter(t => t.id !== tool.id && t.category === tool.category).slice(0, 4);
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#E0E0E0] pb-12 font-mono">
@@ -178,118 +167,142 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       </div>
 
       <div className="w-full px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+        {/* BANNER */}
         <div className="bg-[#151517] border border-white/10 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-indigo-600/30 text-indigo-300 border border-indigo-500/40">{tool.category}</span>
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-red-600/30 text-red-300 border border-red-500/40">Adobe Acrobat Style Engine</span>
             <h1 className="text-2xl font-extrabold text-white mt-1">{tool.name}</h1>
             <p className="text-xs text-slate-300 mt-1">{tool.description}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* LEFT PARAMETERS */}
-          <div className="lg:col-span-5 bg-[#151517] border border-white/10 rounded-lg p-5 space-y-4">
+          
+          {/* LEFT: PARAMETERS & FORMATS (ADOBE STYLE) */}
+          <div className="lg:col-span-4 bg-[#151517] border border-white/10 rounded-lg p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <span className="text-xs font-bold uppercase text-indigo-400 flex items-center gap-1.5"><Sliders className="w-4 h-4" /> Parameters</span>
+              <span className="text-xs font-bold uppercase text-red-400 flex items-center gap-1.5"><Sliders className="w-4 h-4" /> Conversion Settings</span>
+            </div>
+
+            {/* FORMAT DROPDOWN */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-200 block">Convert to:</label>
+              <select value={inputValues['outputFormat']} onChange={(e) => handleInputChange('outputFormat', e.target.value)} className="w-full px-3 py-2.5 bg-[#0A0A0A] border border-white/20 rounded text-xs text-white focus:border-red-500 font-bold">
+                {formatOptions.map((fmt) => <option key={fmt} value={fmt}>{fmt}</option>)}
+              </select>
             </div>
 
             {tool.inputs.map((param) => (
               <div key={param.id} className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-200 block">{param.name}</label>
                 {param.type === 'textarea' || param.type === 'text' ? (
-                  <textarea rows={param.type === 'textarea' ? 3 : 1} value={inputValues[param.id] || ''} onChange={(e) => handleInputChange(param.id, e.target.value)} className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500 focus:outline-none" />
+                  <textarea rows={2} value={inputValues[param.id] || ''} onChange={(e) => handleInputChange(param.id, e.target.value)} className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-red-500" />
                 ) : param.type === 'select' ? (
-                  <select value={inputValues[param.id] || param.options?.[0]} onChange={(e) => handleInputChange(param.id, e.target.value)} className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500 font-mono">
+                  <select value={inputValues[param.id] || param.options?.[0]} onChange={(e) => handleInputChange(param.id, e.target.value)} className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-red-500 font-mono">
                     {param.options?.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 ) : null}
               </div>
             ))}
 
-            {showUpload && (
-              <div className="pt-3 border-t border-white/10 space-y-2">
-                <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5 text-indigo-400" /> {uploadLabel}</span>
-                {!uploadedFile ? (
-                  <div onClick={() => fileInputRef.current?.click()} className="border border-dashed border-white/20 hover:border-indigo-500 bg-[#0A0A0A] rounded p-3 text-center cursor-pointer transition-colors">
-                    <UploadCloud className="w-5 h-5 text-indigo-400 mx-auto mb-1" />
-                    <p className="text-xs text-slate-300">Click to browse or Drag & Drop File</p>
-                    <input type="file" ref={fileInputRef} onChange={(e) => e.target.files?.[0] && setUploadedFile(e.target.files[0])} className="hidden" />
-                  </div>
-                ) : (
-                  <div className="p-2 bg-[#0A0A0A] border border-indigo-500/40 rounded flex items-center justify-between text-xs">
-                    <span className="truncate text-white max-w-[200px]">{uploadedFile.name}</span>
-                    <button onClick={() => setUploadedFile(null)} className="text-rose-400 p-1 hover:bg-rose-500/20 rounded"><X className="w-4 h-4" /></button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className={`grid ${showQuality ? 'grid-cols-2' : 'grid-cols-1'} gap-2 pt-3 border-t border-white/10`}>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 block">Output Format</label>
-                <select value={inputValues['outputFormat']} onChange={(e) => handleInputChange('outputFormat', e.target.value)} className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500">
-                  {formatOptions.map((fmt) => <option key={fmt} value={fmt}>{fmt}</option>)}
-                </select>
-              </div>
+            {/* FILE UPLOAD BOX */}
+            <div className="pt-3 border-t border-white/10 space-y-2">
+              <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5 text-red-400" /> Upload Source PDF</span>
+              {!uploadedFile ? (
+                <div onClick={() => fileInputRef.current?.click()} className="border border-dashed border-red-500/40 hover:border-red-500 bg-[#0A0A0A] rounded-lg p-4 text-center cursor-pointer transition-all">
+                  <UploadCloud className="w-6 h-6 text-red-500 mx-auto mb-1" />
+                  <p className="text-xs text-slate-200 font-bold">Choose a file or drag & drop here</p>
+                  <input type="file" ref={fileInputRef} onChange={(e) => e.target.files?.[0] && setUploadedFile(e.target.files[0])} className="hidden" />
+                </div>
+              ) : (
+                <div className="p-2.5 bg-[#0A0A0A] border border-red-500/50 rounded flex items-center justify-between text-xs">
+                  <span className="truncate text-white font-bold">{uploadedFile.name}</span>
+                  <button onClick={() => setUploadedFile(null)} className="text-rose-400 p-1 hover:bg-rose-500/20 rounded"><X className="w-4 h-4" /></button>
+                </div>
+              )}
             </div>
 
-            <button onClick={handleExecute} disabled={isRunning} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 mt-4 transition-colors">
+            {/* EXECUTE / CONVERT BUTTON */}
+            <button onClick={handleExecute} disabled={isRunning} className="w-full py-3.5 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-2 mt-4 shadow-lg shadow-red-600/20 transition-all cursor-pointer">
               {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-white" />}
-              <span>{isRunning ? 'Processing Request...' : 'Execute Tool'}</span>
+              <span>{isRunning ? 'Converting File...' : `Convert to ${inputValues['outputFormat']?.split(' ')[0] || 'JPG'}`}</span>
             </button>
           </div>
 
-          {/* RIGHT LARGE PROFESSIONAL PREVIEW & OUTPUT */}
-          <div className="lg:col-span-7 bg-[#151517] border border-white/10 rounded-lg p-5 min-h-[580px] flex flex-col justify-between">
+          {/* RIGHT: LIVE PREVIEW & ADOBE STYLE OUTPUT PANEL */}
+          <div className="lg:col-span-8 bg-[#151517] border border-white/10 rounded-lg p-6 min-h-[620px] flex flex-col justify-between shadow-2xl">
             <div>
-              <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-                <span className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4" /> Live Professional Preview Viewer
+              <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-5">
+                <span className="text-xs font-bold uppercase text-red-400 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4" /> Live Acrobat Workspace & Preview
                 </span>
+                {executionTime && <span className="text-emerald-400 text-[11px] bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/20 font-bold">{executionTime}ms</span>}
               </div>
 
-              {/* Initial Upload State */}
+              {/* 1. INITIAL UPLOAD STATE */}
               {!isRunning && !outputResult && uploadedFile && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-12 text-center min-h-[440px]">
-                  <Paperclip className="w-16 h-16 text-indigo-400 mx-auto mb-3 animate-pulse" />
+                  <FileText className="w-16 h-16 text-red-500 mx-auto mb-3 animate-bounce" />
                   <h3 className="text-white font-bold text-base">{uploadedFile.name}</h3>
-                  <p className="text-slate-400 text-xs mt-1">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • File Loaded & Ready</p>
-                  <p className="text-[11px] text-indigo-400 mt-4 bg-indigo-500/10 px-3 py-1 rounded border border-indigo-500/20">Click "Execute Tool" to process and view large preview</p>
+                  <p className="text-slate-400 text-xs mt-1">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • File Ready for Conversion</p>
+                  <p className="text-[11px] text-red-400 mt-4 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 font-bold">Click "Convert" to process instantly</p>
                 </div>
               )}
 
+              {/* 2. LIVE ADOBE STYLE PROGRESS BAR (0% - 100%) */}
               {isRunning && (
-                <AIProcessingState tool={tool} currentStep="Processing Document..." progressPercent={progressPercent} elapsedSec={elapsedSec} inputValues={inputValues} uploadedFile={uploadedFile} />
+                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-10 flex flex-col items-center justify-center min-h-[440px] space-y-6">
+                  <div className="relative w-20 h-20 flex items-center justify-center">
+                    <div className="absolute inset-0 border-4 border-red-500/20 rounded-full"></div>
+                    <div className="absolute inset-0 border-4 border-red-600 rounded-full animate-spin border-t-transparent"></div>
+                    <span className="text-white font-extrabold text-sm">{progressPercent}%</span>
+                  </div>
+                  <div className="w-full max-w-md space-y-2">
+                    <div className="flex justify-between text-xs font-bold text-slate-300">
+                      <span>Converting Document...</span>
+                      <span>{progressPercent}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-red-600 transition-all duration-150" style={{ width: `${progressPercent}%` }}></div>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-mono">Securing output format and rendering layout...</p>
+                </div>
               )}
 
-              {/* 🚀 LARGE PROFESSIONAL PREVIEW PANE (Like Smallpdf/Adobe) */}
-              {imageUrlResult && !isRunning && (
-                <div className="space-y-3 w-full flex flex-col items-center justify-center bg-[#0A0A0A] border border-white/10 rounded-xl p-4 min-h-[440px] shadow-2xl">
-                  {uploadedFile?.type === 'application/pdf' ? (
-                    <object data={imageUrlResult} type="application/pdf" className="w-full h-[420px] rounded-lg border border-white/10 bg-white">
-                      <iframe src={imageUrlResult} className="w-full h-[420px] rounded-lg">
-                        <p className="text-xs text-slate-400 text-center p-4">Preview not supported. Please use the download button below.</p>
-                      </iframe>
-                    </object>
-                  ) : (
-                    <img src={imageUrlResult} alt="Large Processed Preview" className="max-h-[420px] w-full object-contain rounded-lg shadow-2xl border border-white/10 bg-black/40" />
-                  )}
-                  <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold pt-1">
-                    <Check className="w-4 h-4" /> Ready for Secure Direct Download
+              {/* 3. SUCCESS PREVIEW & DOWNLOAD PANE */}
+              {outputResult && !isRunning && (
+                <div className="space-y-4 w-full flex flex-col items-center justify-center bg-[#0A0A0A] border border-red-500/30 rounded-xl p-6 min-h-[400px] shadow-2xl">
+                  <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center border border-emerald-500/40">
+                    <Check className="w-6 h-6" />
                   </div>
+                  <div className="text-center space-y-1">
+                    <h3 className="text-white font-extrabold text-lg">Your file is ready!</h3>
+                    <p className="text-slate-400 text-xs">Successfully processed via Adobe-Style Neural Engine.</p>
+                  </div>
+
+                  {/* ADOBE STYLE BIG DOWNLOAD BUTTON */}
+                  <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full max-w-md py-4 px-6 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-3 cursor-pointer shadow-xl shadow-red-600/30 transition-all">
+                    {isDownloading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                    <span>{isDownloading ? 'Downloading File...' : `Download ${inputValues['outputFormat']?.split(' ')[0] || 'JPG'}`}</span>
+                  </button>
                 </div>
               )}
             </div>
 
-            {/* DIRECT DOWNLOAD BUTTON AT BOTTOM */}
-            {outputResult && !isRunning && (
-              <div className="space-y-3 w-full mt-4 pt-4 border-t border-white/10">
-                <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-xl transition-all">
-                  {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  <span>{isDownloading ? 'Downloading...' : tool.id === 'pdf-to-jpg' ? 'Download Converted JPG' : 'Download Processed PDF'}</span>
-                </button>
+            {/* 🚀 ADOBE STYLE "GIVE OTHER TOOLS A TRY" (RELATED TOOLS) */}
+            <div className="mt-6 pt-5 border-t border-white/10">
+              <h4 className="text-[11px] font-extrabold uppercase text-slate-400 mb-3 tracking-wider">Give other tools a try. It's free.</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {relatedTools.map((t) => (
+                  <button key={t.id} onClick={() => onSelectTool(t)} className="p-3 bg-white/5 hover:bg-red-600/10 border border-white/10 hover:border-red-500/40 rounded-xl text-left transition-all group cursor-pointer flex flex-col justify-between">
+                    <span className="text-xs font-bold text-white group-hover:text-red-400 truncate">{t.name}</span>
+                    <span className="text-[10px] text-slate-400 mt-2 block">Free tool &rarr;</span>
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
+
           </div>
         </div>
       </div>
