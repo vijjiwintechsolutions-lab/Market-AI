@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Play, Sparkles, Check, Download, RefreshCw, Sliders, UploadCloud, X, Paperclip, FileText,
-  ZoomIn, ZoomOut, RotateCw, ChevronLeft, ChevronRight, Code, Calculator, Music, Video, Image as ImageIcon, Copy, FileSpreadsheet, DollarSign, PieChart
+  ZoomIn, ZoomOut, RotateCw, ChevronLeft, ChevronRight, Code, Calculator, Music, Video, Image as ImageIcon, Copy, FileSpreadsheet
 } from 'lucide-react';
 import { AITool, ExecutionHistoryItem } from '../types';
 import { apiService } from '../services/apiService';
@@ -22,7 +22,6 @@ export function resolveToolConfig(tool: AITool) {
   const name = (tool.name || '').toLowerCase();
   const id = (tool.id || '').toLowerCase();
   const cat = (tool.category || '').toLowerCase();
-  const outType = (tool.outputType || '').toLowerCase();
 
   let showConvertDropdown = true;
   let formatOptions: string[] = [];
@@ -70,6 +69,70 @@ export function resolveToolConfig(tool: AITool) {
   }
 
   return { showConvertDropdown, formatOptions, defaultExt, uploadLabel, showUpload, actionButtonText };
+}
+
+// 🚀 PARSE INLINE BOLD (**text**) INTO CLEAN STYLED React SPANS
+function parseInlineBold(str: string) {
+  const parts = str.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="font-extrabold text-white">{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
+// 🚀 CLEAN MARKDOWN RENDERER: REMOVES ###, - **, --- AND RENDERS CLEAN UI CARDS
+function renderCleanFormattedText(text: string) {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+
+  return (
+    <div className="space-y-2 font-sans text-xs text-slate-200">
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+
+        // 1. Divider Line (---) -> Render styled border instead of literal ---
+        if (trimmed === '---') {
+          return <hr key={idx} className="border-white/10 my-3" />;
+        }
+
+        // 2. Heading Line (### Title) -> Render bold clean header without ###
+        if (trimmed.startsWith('#')) {
+          const cleanHeading = trimmed.replace(/^#+\s*/, '');
+          return (
+            <div key={idx} className="text-sm font-extrabold text-red-400 mt-3 mb-2 flex items-center gap-2 border-b border-white/5 pb-1">
+              {parseInlineBold(cleanHeading)}
+            </div>
+          );
+        }
+
+        // 3. List Item (- **Key:** Value) -> Render clean bullet without - or **
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+          const cleanBullet = trimmed.replace(/^[-*]\s*/, '');
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-2 py-0.5 text-slate-200 hover:bg-white/5 rounded transition-colors">
+              <span className="text-red-400 font-bold">•</span>
+              <div>{parseInlineBold(cleanBullet)}</div>
+            </div>
+          );
+        }
+
+        // 4. Empty lines
+        if (!trimmed) {
+          return <div key={idx} className="h-1" />;
+        }
+
+        // 5. Normal text paragraph
+        return (
+          <div key={idx} className="text-slate-300 py-0.5">
+            {parseInlineBold(line)}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
@@ -248,6 +311,19 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   };
 
+  // Helper to copy raw text without syntax characters
+  const handleCopyCleanText = () => {
+    if (!outputResult) return;
+    const cleanText = outputResult
+      .replace(/^#+\s*/gm, '')
+      .replace(/\*\*/g, '')
+      .replace(/^[-*]\s*/gm, '• ')
+      .replace(/^---$/gm, '');
+    navigator.clipboard.writeText(cleanText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const relatedTools = allTools.filter(t => t.id !== tool.id && t.category === tool.category).slice(0, 4);
   const isUploadedPdf = uploadedFile && (uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf'));
 
@@ -379,13 +455,13 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* 🚀 RICH MATHEMATICAL & FINANCIAL SUMMARY OUTPUT WORKSPACE */}
+              {/* 🚀 CLEAN MARKDOWN UI OUTPUT WORKSPACE (WITHOUT RAW ###, **, --- SYMBOLS) */}
               {outputResult && !isUploadedPdf && !isRunning && (
-                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-5 min-h-[400px] max-h-[440px] overflow-y-auto text-xs font-mono text-slate-200 leading-relaxed whitespace-pre-wrap relative">
-                  <button onClick={() => { navigator.clipboard.writeText(outputResult); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="absolute top-3 right-3 px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-[10px] font-bold text-slate-300 flex items-center gap-1 cursor-pointer">
+                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-5 min-h-[400px] max-h-[440px] overflow-y-auto relative">
+                  <button onClick={handleCopyCleanText} className="absolute top-3 right-3 px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-[10px] font-bold text-slate-300 flex items-center gap-1 cursor-pointer">
                     <Copy className="w-3 h-3" /> {copied ? 'Copied!' : 'Copy'}
                   </button>
-                  {outputResult}
+                  {renderCleanFormattedText(outputResult)}
                 </div>
               )}
             </div>
