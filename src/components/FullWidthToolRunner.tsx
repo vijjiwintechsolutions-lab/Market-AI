@@ -46,7 +46,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     formatOptions = ['MP3 Audio (.mp3)'];
     showQuality = true; uploadLabel = 'Upload Audio File (Optional)';
   } else if (isPDF) {
-    formatOptions = ['PDF Document (.pdf)'];
+    formatOptions = tool.id === 'pdf-to-jpg' ? ['JPG Image (.jpg)', 'ZIP Package (.zip)'] : ['PDF Document (.pdf)'];
     showQuality = false; uploadLabel = 'Upload PDF Document (Required)';
   } else if (isCalc) {
     formatOptions = ['Plain Text (.txt)'];
@@ -118,18 +118,10 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       
       if (res.success) {
         setProgressPercent(100);
-        if (res.fileUrl) {
-          setFileDownloadUrl(res.fileUrl);
-          setOutputResult(res.textOutput || "File Ready!");
-        } else if (isVideo || res.videoUrl) {
-          setVideoUrlResult(res.videoUrl || null); setVideoPosterUrl(res.frameUrl || null);
-        } else if (isImage || res.imageUrl) {
-          setImageUrlResult(res.imageUrl || null);
-        } else if (isAudio || res.audioUrl) {
-          setAudioUrlResult(res.audioUrl || null);
-        } else {
-          setOutputResult(res.textOutput || String(res.output || ''));
-        }
+        if (res.fileUrl) setFileDownloadUrl(res.fileUrl);
+        if (res.imageUrl) setImageUrlResult(res.imageUrl); // 🚀 Show image preview in right panel
+
+        setOutputResult(res.textOutput || "File Ready!");
 
         onSaveHistory({
           id: `hist-${Date.now()}`, toolId: tool.id, toolName: tool.name,
@@ -145,21 +137,17 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   };
 
-  // 🚀 DIRECT BLOB DOWNLOAD HANDLER (No new tabs, exact file extension)
   const handleDirectDownloadFile = async () => {
-    if (!fileDownloadUrl) return;
+    const downloadTarget = fileDownloadUrl || imageUrlResult;
+    if (!downloadTarget) return;
     setIsDownloading(true);
 
     let ext = 'pdf';
     if (tool.id === 'pdf-to-jpg') ext = 'jpg';
-    else if (tool.id === 'compress-pdf') ext = 'pdf';
-    else if (tool.id === 'rotate-pdf') ext = 'pdf';
-    else if (tool.id === 'delete-pdf-pages') ext = 'pdf';
-
-    const filename = `${tool.id}-optimized.${ext}`;
+    const filename = `${tool.id}-output.${ext}`;
 
     try {
-      const response = await fetch(fileDownloadUrl);
+      const response = await fetch(downloadTarget);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       
@@ -171,9 +159,8 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
-      // Fallback if fetch fails
       const link = document.createElement('a');
-      link.href = fileDownloadUrl;
+      link.href = downloadTarget;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
@@ -255,58 +242,36 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
           <div className="lg:col-span-7 bg-[#151517] border border-white/10 rounded-lg p-5 min-h-[500px] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
               <span className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
-                {uploadedFile && !outputResult && !imageUrlResult ? <Eye className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />} 
-                {uploadedFile && !outputResult && !imageUrlResult ? 'Live File Status' : 'Live Output'}
+                <Sparkles className="w-4 h-4" /> Live Output & Preview
               </span>
             </div>
 
-            {!isRunning && !outputResult && !imageUrlResult && !videoUrlResult && uploadedFile && (
+            {!isRunning && !outputResult && uploadedFile && (
               <div className="flex-1 w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-8 text-center">
-                {uploadedFile.type.startsWith('image/') && previewUrl ? (
-                  <img src={previewUrl} alt="Preview" className="max-w-full max-h-[350px] object-contain rounded" />
-                ) : (
-                  <div>
-                    <Paperclip className="w-12 h-12 text-indigo-400 mx-auto mb-2" />
-                    <h3 className="text-white font-bold">{uploadedFile.name}</h3>
-                    <p className="text-slate-400 text-xs">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • Ready</p>
-                  </div>
-                )}
+                <Paperclip className="w-12 h-12 text-indigo-400 mx-auto mb-2" />
+                <h3 className="text-white font-bold">{uploadedFile.name}</h3>
+                <p className="text-slate-400 text-xs">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • Ready</p>
               </div>
             )}
 
             {isRunning && (
-              <AIProcessingState 
-                tool={tool} 
-                currentStep="Processing Request..." 
-                progressPercent={progressPercent} 
-                elapsedSec={elapsedSec} 
-                inputValues={inputValues} 
-                uploadedFile={uploadedFile} 
-              />
+              <AIProcessingState tool={tool} currentStep="Processing Document..." progressPercent={progressPercent} elapsedSec={elapsedSec} inputValues={inputValues} uploadedFile={uploadedFile} />
             )}
 
+            {/* 🚀 LIVE IMAGE PREVIEW IN RIGHT PANEL FOR CONVERTERS */}
             {imageUrlResult && !isRunning && (
-              <div className="space-y-3 w-full">
-                <img src={imageUrlResult} alt="Generated Output" className="w-full h-auto max-h-[440px] object-contain rounded shadow-lg" />
+              <div className="space-y-4 w-full flex-1 flex flex-col items-center justify-center bg-[#0A0A0A] border border-white/10 rounded-lg p-4">
+                <img src={imageUrlResult} alt="Converted Page Preview" className="max-h-[360px] w-auto object-contain rounded shadow-lg border border-white/10" />
+                <p className="text-[11px] text-emerald-400 font-bold">✨ Live Page Preview Rendered Successfully</p>
               </div>
             )}
 
-            {outputResult && !imageUrlResult && !videoUrlResult && !audioUrlResult && !isRunning && (
-              <div className="space-y-4 w-full h-full flex flex-col">
-                <div className="flex-1 bg-[#0A0A0A] border border-emerald-500/30 rounded-lg p-6 text-sm text-slate-200 whitespace-pre-wrap leading-relaxed shadow-lg">
-                  {outputResult}
-                </div>
-                
-                {isPDF && fileDownloadUrl ? (
-                  <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-all">
-                    {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                    <span>{isDownloading ? 'Downloading...' : 'Download Processed PDF'}</span>
-                  </button>
-                ) : (
-                  <button onClick={() => { navigator.clipboard.writeText(outputResult); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="w-full py-2 bg-white/5 text-slate-200 text-xs font-bold rounded flex items-center justify-center gap-2 cursor-pointer">
-                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />} <span>{copied ? 'Copied!' : 'Copy Result'}</span>
-                  </button>
-                )}
+            {outputResult && !isRunning && (
+              <div className="space-y-4 w-full flex flex-col mt-4">
+                <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-all">
+                  {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  <span>{isDownloading ? 'Downloading...' : tool.id === 'pdf-to-jpg' ? 'Download Converted JPG' : 'Download Processed PDF'}</span>
+                </button>
               </div>
             )}
           </div>
