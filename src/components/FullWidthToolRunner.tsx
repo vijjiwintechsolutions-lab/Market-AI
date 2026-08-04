@@ -358,15 +358,4 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                     <Download className="w-4 h-4" /> Download Processed File
                   </button>
                 ) : (
-                  <button onClick={() => { navigator.clipboard.writeText(outputResult); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="w-full py-2 bg-white/5 hover:bg-white/10 text-slate-200 text-xs font-bold rounded border border-white/10 flex items-center justify-center gap-2 cursor-pointer transition-colors">
-                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />} <span>{copied ? 'Copied!' : 'Copy Result'}</span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+                  <button onClick={() => { navigator.clipboar
