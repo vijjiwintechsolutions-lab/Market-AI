@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  ArrowLeft, Play, Sparkles, Check, Download, RefreshCw, Sliders, UploadCloud, X, Paperclip, FileText
+  ArrowLeft, Play, Sparkles, Check, Download, RefreshCw, Sliders, UploadCloud, X, Paperclip, FileText,
+  ZoomIn, ZoomOut, RotateCw, ChevronLeft, ChevronRight, Maximize2
 } from 'lucide-react';
 import { AITool, ExecutionHistoryItem } from '../types';
 import { apiService } from '../services/apiService';
@@ -31,27 +32,72 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   const [isRunning, setIsRunning] = useState(false);
   const [outputResult, setOutputResult] = useState<string | null>(null);
   const [fileDownloadUrl, setFileDownloadUrl] = useState<string | null>(null);
-  const [imageUrlResult, setImageUrlResult] = useState<string | null>(null);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
   const [progressPercent, setProgressPercent] = useState<number>(0);
-  const [elapsedSec, setElapsedSec] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // 🚀 ADVANCED PDF PREVIEW CONTROLS (PAGE SWITCHER, ZOOM, ROTATION)
+  const [numPages, setNumPages] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [zoomScale, setZoomScale] = useState<number>(1.0);
+  const [rotationAngle, setRotationAngle] = useState<number>(0);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const initial: Record<string, any> = {};
     tool.inputs.forEach((p) => { initial[p.id] = p.defaultValue || ''; });
     initial['outputFormat'] = formatOptions[0];
     setInputValues(initial);
-    setOutputResult(null); setFileDownloadUrl(null); setImageUrlResult(null);
+    setOutputResult(null); setFileDownloadUrl(null);
     setUploadedFile(null);
+    setCurrentPage(1); setNumPages(1); setZoomScale(1.0); setRotationAngle(0);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (window.history && window.history.pushState) {
       window.history.pushState({}, '', `/tools/${tool.id}`);
     }
   }, [tool.id]);
+
+  // 🚀 RENDER PDF PAGE TO CANVAS WITH ZOOM & ROTATE
+  useEffect(() => {
+    if (!uploadedFile || uploadedFile.type !== 'application/pdf') return;
+
+    const renderPdfPage = async () => {
+      try {
+        if (!(window as any).pdfjsLib) {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          document.head.appendChild(script);
+          await new Promise((res) => (script.onload = res));
+          (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        const pdfjsLib = (window as any).pdfjsLib;
+        const arrayBuffer = await uploadedFile.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+        
+        setNumPages(pdf.numPages);
+        const page = await pdf.getPage(currentPage);
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const viewport = page.getViewport({ scale: zoomScale, rotation: rotationAngle });
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({ canvasContext: context, viewport }).promise;
+      } catch (err) {
+        console.error("PDF Render Error:", err);
+      }
+    };
+
+    renderPdfPage();
+  }, [uploadedFile, currentPage, zoomScale, rotationAngle, outputResult]);
 
   const handleInputChange = (id: string, value: any) => setInputValues((prev) => ({ ...prev, [id]: value }));
 
@@ -62,14 +108,13 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
 
     setIsRunning(true);
-    setOutputResult(null); setFileDownloadUrl(null); setImageUrlResult(null);
-    setProgressPercent(0); setElapsedSec(0);
+    setOutputResult(null); setFileDownloadUrl(null);
+    setProgressPercent(0);
     const startTime = Date.now();
 
     const progressInt = setInterval(() => {
       setProgressPercent((p) => (p < 92 ? p + Math.floor(Math.random() * 12) + 5 : p));
     }, 120);
-    const timerInt = setInterval(() => setElapsedSec((p) => parseFloat((p + 0.1).toFixed(1))), 100);
 
     try {
       const res = await apiService.executeTool({ tool, inputValues, file: uploadedFile });
@@ -82,7 +127,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       setTimeout(() => {
         if (res.success) {
           if (res.fileUrl) setFileDownloadUrl(res.fileUrl);
-          if (res.imageUrl) setImageUrlResult(res.imageUrl);
           setOutputResult(res.textOutput || "File Ready!");
 
           onSaveHistory({
@@ -98,15 +142,11 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     } catch (err) {
       clearInterval(progressInt);
       setIsRunning(false);
-    } finally {
-      clearInterval(timerInt);
     }
   };
 
-  // 🚀 DIRECT BLOB DOWNLOAD (Exact JPG / PDF file)
   const handleDirectDownloadFile = async () => {
-    const targetUrl = fileDownloadUrl || imageUrlResult;
-    if (!targetUrl) return;
+    if (!fileDownloadUrl) return;
     setIsDownloading(true);
 
     const formatChoice = inputValues['outputFormat'] || 'JPG';
@@ -118,10 +158,10 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       else if (formatChoice.includes('TIFF')) ext = 'tiff';
     }
 
-    const filename = `${tool.id}-output.${ext}`;
+    const filename = `${tool.id}-page${currentPage}.${ext}`;
 
     try {
-      const response = await fetch(targetUrl);
+      const response = await fetch(fileDownloadUrl);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       
@@ -134,7 +174,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       const link = document.createElement('a');
-      link.href = targetUrl;
+      link.href = fileDownloadUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
@@ -148,142 +188,162 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#E0E0E0] pb-12 font-mono">
-      <div className="bg-[#151517] border-b border-white/10 px-4 py-3 flex items-center justify-between">
-        <button onClick={onBack} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold rounded cursor-pointer">
+      <div className="bg-[#151517] border-b border-white/10 px-4 py-2 flex items-center justify-between">
+        <button onClick={onBack} className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold rounded cursor-pointer">
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Marketplace
         </button>
       </div>
 
-      <div className="w-full px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
-        <div className="bg-[#151517] border border-white/10 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-red-600/30 text-red-300 border border-red-500/40">Adobe Acrobat Style Engine</span>
-            <h1 className="text-2xl font-extrabold text-white mt-1">{tool.name}</h1>
-            <p className="text-xs text-slate-300 mt-1">{tool.description}</p>
+      <div className="w-full px-4 sm:px-6 lg:px-8 pt-4 space-y-4">
+        
+        {/* 🚀 COMPACT SLIM HEADER BAR (DECREASED BAR SIZE) */}
+        <div className="bg-[#151517] border border-white/10 rounded-lg px-4 py-2.5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-red-600/30 text-red-300 border border-red-500/40">ENGINE</span>
+            <h1 className="text-base font-extrabold text-white">{tool.name}</h1>
+            <p className="text-xs text-slate-400 hidden sm:block border-l border-white/10 pl-3">{tool.description}</p>
           </div>
+          {executionTime && <span className="text-emerald-400 text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">{executionTime}ms</span>}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           
-          {/* LEFT SETTINGS */}
-          <div className="lg:col-span-4 bg-[#151517] border border-white/10 rounded-lg p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <span className="text-xs font-bold uppercase text-red-400 flex items-center gap-1.5"><Sliders className="w-4 h-4" /> Conversion Settings</span>
+          {/* LEFT CONVERSION SETTINGS */}
+          <div className="lg:col-span-4 bg-[#151517] border border-white/10 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <span className="text-xs font-bold uppercase text-red-400 flex items-center gap-1.5"><Sliders className="w-3.5 h-3.5" /> Options</span>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-bold text-slate-200 block">Convert to:</label>
-              <select value={inputValues['outputFormat']} onChange={(e) => handleInputChange('outputFormat', e.target.value)} className="w-full px-3 py-2.5 bg-[#0A0A0A] border border-white/20 rounded text-xs text-white focus:border-red-500 font-bold">
+              <select value={inputValues['outputFormat']} onChange={(e) => handleInputChange('outputFormat', e.target.value)} className="w-full px-2.5 py-2 bg-[#0A0A0A] border border-white/20 rounded text-xs text-white focus:border-red-500 font-bold">
                 {formatOptions.map((fmt) => <option key={fmt} value={fmt}>{fmt}</option>)}
               </select>
             </div>
 
             {tool.inputs.map((param) => (
-              <div key={param.id} className="space-y-1.5">
+              <div key={param.id} className="space-y-1">
                 <label className="text-xs font-bold text-slate-200 block">{param.name}</label>
                 {param.type === 'textarea' || param.type === 'text' ? (
-                  <textarea rows={2} value={inputValues[param.id] || ''} onChange={(e) => handleInputChange(param.id, e.target.value)} className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-red-500" />
+                  <textarea rows={1} value={inputValues[param.id] || ''} onChange={(e) => handleInputChange(param.id, e.target.value)} className="w-full px-2.5 py-1.5 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-red-500" />
                 ) : param.type === 'select' ? (
-                  <select value={inputValues[param.id] || param.options?.[0]} onChange={(e) => handleInputChange(param.id, e.target.value)} className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-red-500 font-mono">
+                  <select value={inputValues[param.id] || param.options?.[0]} onChange={(e) => handleInputChange(param.id, e.target.value)} className="w-full px-2.5 py-1.5 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-red-500 font-mono">
                     {param.options?.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 ) : null}
               </div>
             ))}
 
-            <div className="pt-3 border-t border-white/10 space-y-2">
-              <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5 text-red-400" /> Upload Source PDF</span>
+            <div className="pt-2 border-t border-white/10 space-y-1.5">
+              <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5 text-red-400" /> Upload PDF</span>
               {!uploadedFile ? (
-                <div onClick={() => fileInputRef.current?.click()} className="border border-dashed border-red-500/40 hover:border-red-500 bg-[#0A0A0A] rounded-lg p-4 text-center cursor-pointer transition-all">
-                  <UploadCloud className="w-6 h-6 text-red-500 mx-auto mb-1" />
-                  <p className="text-xs text-slate-200 font-bold">Choose a file or drag & drop here</p>
+                <div onClick={() => fileInputRef.current?.click()} className="border border-dashed border-red-500/40 hover:border-red-500 bg-[#0A0A0A] rounded-lg p-3 text-center cursor-pointer transition-all">
+                  <UploadCloud className="w-5 h-5 text-red-500 mx-auto mb-1" />
+                  <p className="text-xs text-slate-200 font-bold">Select File or Drag Here</p>
                   <input type="file" ref={fileInputRef} onChange={(e) => e.target.files?.[0] && setUploadedFile(e.target.files[0])} className="hidden" />
                 </div>
               ) : (
-                <div className="p-2.5 bg-[#0A0A0A] border border-red-500/50 rounded flex items-center justify-between text-xs">
+                <div className="p-2 bg-[#0A0A0A] border border-red-500/50 rounded flex items-center justify-between text-xs">
                   <span className="truncate text-white font-bold">{uploadedFile.name}</span>
-                  <button onClick={() => setUploadedFile(null)} className="text-rose-400 p-1 hover:bg-rose-500/20 rounded cursor-pointer"><X className="w-4 h-4" /></button>
+                  <button onClick={() => setUploadedFile(null)} className="text-rose-400 p-1 hover:bg-rose-500/20 rounded cursor-pointer"><X className="w-3.5 h-3.5" /></button>
                 </div>
               )}
             </div>
 
-            <button onClick={handleExecute} disabled={isRunning} className="w-full py-3.5 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-2 mt-4 shadow-lg shadow-red-600/20 transition-all cursor-pointer">
+            <button onClick={handleExecute} disabled={isRunning} className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-red-600/20 transition-all cursor-pointer">
               {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-white" />}
-              <span>{isRunning ? 'Converting File...' : `Convert to ${inputValues['outputFormat']?.split(' ')[0] || 'JPG'}`}</span>
+              <span>{isRunning ? 'Converting...' : `Convert to ${inputValues['outputFormat']?.split(' ')[0] || 'JPG'}`}</span>
             </button>
           </div>
 
-          {/* RIGHT LARGE PREVIEW & ADOBE WORKSPACE */}
-          <div className="lg:col-span-8 bg-[#151517] border border-white/10 rounded-lg p-6 min-h-[620px] flex flex-col justify-between shadow-2xl">
+          {/* RIGHT WORKSPACE WITH ADVANCED PREVIEW TOOLBAR */}
+          <div className="lg:col-span-8 bg-[#151517] border border-white/10 rounded-lg p-4 min-h-[560px] flex flex-col justify-between shadow-2xl">
             <div>
-              <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-5">
-                <span className="text-xs font-bold uppercase text-red-400 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4" /> Live Acrobat Workspace & Preview
+              {/* 🚀 PRO PREVIEW TOOLBAR (PAGE NAV, ZOOM IN/OUT, ROTATE) */}
+              <div className="flex flex-wrap items-center justify-between pb-2 border-b border-white/10 mb-3 gap-2 bg-[#0A0A0A] p-2 rounded-lg border border-white/5">
+                <span className="text-xs font-bold text-red-400 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" /> Interactive Viewer
                 </span>
-                {executionTime && <span className="text-emerald-400 text-[11px] bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/20 font-bold">{executionTime}ms</span>}
+
+                {uploadedFile && (
+                  <div className="flex items-center gap-3">
+                    {/* PAGE SWITCHER */}
+                    <div className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/10 text-xs text-white">
+                      <button disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)} className="p-0.5 hover:bg-white/10 rounded disabled:opacity-30 cursor-pointer"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                      <span className="font-bold text-[11px] px-1">Page {currentPage} of {numPages}</span>
+                      <button disabled={currentPage >= numPages} onClick={() => setCurrentPage(p => p + 1)} className="p-0.5 hover:bg-white/10 rounded disabled:opacity-30 cursor-pointer"><ChevronRight className="w-3.5 h-3.5" /></button>
+                    </div>
+
+                    {/* ZOOM CONTROLS */}
+                    <div className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded border border-white/10 text-xs text-white">
+                      <button onClick={() => setZoomScale(z => Math.max(0.5, z - 0.2))} className="p-0.5 hover:bg-white/10 rounded cursor-pointer" title="Zoom Out"><ZoomOut className="w-3.5 h-3.5" /></button>
+                      <span className="font-bold text-[11px] px-1">{Math.round(zoomScale * 100)}%</span>
+                      <button onClick={() => setZoomScale(z => Math.min(2.5, z + 0.2))} className="p-0.5 hover:bg-white/10 rounded cursor-pointer" title="Zoom In"><ZoomIn className="w-3.5 h-3.5" /></button>
+                    </div>
+
+                    {/* ROTATE CONTROL */}
+                    <button onClick={() => setRotationAngle(r => (r + 90) % 360)} className="p-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-white cursor-pointer" title="Rotate 90°">
+                      <RotateCw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {!isRunning && !outputResult && uploadedFile && (
-                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-12 text-center min-h-[440px]">
-                  <FileText className="w-16 h-16 text-red-500 mx-auto mb-3 animate-bounce" />
-                  <h3 className="text-white font-bold text-base">{uploadedFile.name}</h3>
-                  <p className="text-slate-400 text-xs mt-1">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • File Ready for Conversion</p>
-                  <p className="text-[11px] text-red-400 mt-4 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 font-bold">Click "Convert" to process instantly</p>
+              {!isRunning && !outputResult && !uploadedFile && (
+                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-12 text-center min-h-[400px]">
+                  <FileText className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" />
+                  <h3 className="text-white font-bold text-sm">No Document Selected</h3>
+                  <p className="text-slate-400 text-xs mt-1">Upload a PDF file to enable live preview controls.</p>
                 </div>
               )}
 
+              {/* PROGRESS BAR */}
               {isRunning && (
-                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-10 flex flex-col items-center justify-center min-h-[440px] space-y-6">
-                  <div className="relative w-20 h-20 flex items-center justify-center">
+                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-8 flex flex-col items-center justify-center min-h-[400px] space-y-4">
+                  <div className="relative w-16 h-16 flex items-center justify-center">
                     <div className="absolute inset-0 border-4 border-red-500/20 rounded-full"></div>
                     <div className="absolute inset-0 border-4 border-red-600 rounded-full animate-spin border-t-transparent"></div>
-                    <span className="text-white font-extrabold text-sm">{progressPercent}%</span>
+                    <span className="text-white font-extrabold text-xs">{progressPercent}%</span>
                   </div>
-                  <div className="w-full max-w-md space-y-2">
+                  <div className="w-full max-w-xs space-y-1">
                     <div className="flex justify-between text-xs font-bold text-slate-300">
                       <span>Converting Document...</span>
                       <span>{progressPercent}%</span>
                     </div>
-                    <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                       <div className="h-full bg-red-600 transition-all duration-150" style={{ width: `${progressPercent}%` }}></div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* 🚀 REAL IMAGE / PDF VIEWER */}
-              {outputResult && !isRunning && (
-                <div className="space-y-4 w-full flex flex-col items-center justify-center bg-[#0A0A0A] border border-red-500/30 rounded-xl p-6 min-h-[440px] shadow-2xl">
-                  {imageUrlResult ? (
-                    <div className="w-full h-[380px] bg-black/60 rounded-lg overflow-hidden border border-white/10 flex items-center justify-center p-2">
-                      {tool.id === 'pdf-to-jpg' ? (
-                        <img src={imageUrlResult} alt="Real Converted Page" className="max-h-full max-w-full object-contain rounded shadow-2xl border border-white/10" />
-                      ) : (
-                        <object data={imageUrlResult} type="application/pdf" className="w-full h-full bg-white">
-                          <iframe src={imageUrlResult} className="w-full h-full">
-                            <p className="text-xs text-slate-400 text-center p-4">Preview ready for download.</p>
-                          </iframe>
-                        </object>
-                      )}
-                    </div>
-                  ) : null}
-
-                  <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full max-w-md py-4 px-6 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-3 cursor-pointer shadow-xl shadow-red-600/30 transition-all">
-                    {isDownloading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-                    <span>{isDownloading ? 'Downloading File...' : tool.id === 'pdf-to-jpg' ? 'Download Converted JPG Image' : 'Download Processed Document'}</span>
-                  </button>
+              {/* 🚀 REAL HIGH-RES CANVAS VIEWER FOR PDF PAGE PREVIEW */}
+              {uploadedFile && (
+                <div className={`w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center overflow-auto min-h-[400px] max-h-[460px] ${isRunning ? 'hidden' : 'block'}`}>
+                  <canvas ref={canvasRef} className="max-w-full shadow-2xl rounded border border-white/10 bg-white" />
+                  <p className="text-[10px] text-emerald-400 font-bold mt-2">✨ Displaying Page {currentPage} of {numPages} ({Math.round(zoomScale * 100)}% Zoom)</p>
                 </div>
               )}
             </div>
 
+            {/* DOWNLOAD BUTTON */}
+            {outputResult && !isRunning && (
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full py-3 px-4 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-xl transition-all">
+                  {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  <span>{isDownloading ? 'Downloading File...' : tool.id === 'pdf-to-jpg' ? `Download Page ${currentPage} JPG Image` : 'Download Processed Document'}</span>
+                </button>
+              </div>
+            )}
+
             {/* RELATED TOOLS */}
-            <div className="mt-6 pt-5 border-t border-white/10">
-              <h4 className="text-[11px] font-extrabold uppercase text-slate-400 mb-3 tracking-wider">Give other tools a try. It's free.</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="mt-4 pt-3 border-t border-white/10">
+              <h4 className="text-[10px] font-extrabold uppercase text-slate-400 mb-2 tracking-wider">Give other tools a try. It's free.</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {relatedTools.map((t) => (
-                  <button key={t.id} onClick={() => onSelectTool(t)} className="p-3 bg-white/5 hover:bg-red-600/10 border border-white/10 hover:border-red-500/40 rounded-xl text-left transition-all group cursor-pointer flex flex-col justify-between">
-                    <span className="text-xs font-bold text-white group-hover:text-red-400 truncate">{t.name}</span>
-                    <span className="text-[10px] text-slate-400 mt-2 block">Free tool &rarr;</span>
+                  <button key={t.id} onClick={() => onSelectTool(t)} className="p-2 bg-white/5 hover:bg-red-600/10 border border-white/10 hover:border-red-500/40 rounded-lg text-left transition-all group cursor-pointer flex flex-col justify-between">
+                    <span className="text-[11px] font-bold text-white group-hover:text-red-400 truncate">{t.name}</span>
+                    <span className="text-[9px] text-slate-400 mt-1 block">Try Now &rarr;</span>
                   </button>
                 ))}
               </div>
