@@ -10,10 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^0.1.2",
+    "@google/genai": "latest",
     "@vercel/node": "^3.0.12",
     "lucide-react": "^0.344.0",
-    "pdf-lib": "^1.17.11",
+    "pdf-lib": "^1.17.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.3"
