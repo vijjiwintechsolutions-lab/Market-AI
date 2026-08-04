@@ -12,7 +12,7 @@ export interface ToolExecutionResponse {
   output: any;
   textOutput?: string;
   fileUrl?: string; 
-  imageUrl?: string; // 🚀 Added image preview support
+  imageUrl?: string; 
   videoUrl?: string;
   frameUrl?: string;
   audioUrl?: string;
@@ -40,7 +40,9 @@ class APIService {
         let successMessage = `### 📄 Document Processing Complete\n\n**Tool Executed:** ${tool.name}\n✅ Your file has been successfully processed. Click the download button below.`;
         let previewImageUrl: string | undefined = undefined;
 
-        // A. Delete PDF Pages
+        // If it's an image file or PDF, we can use the object URL of the uploaded file itself as a pristine preview!
+        previewImageUrl = URL.createObjectURL(file);
+
         if (tool.id === 'delete-pdf-pages') {
           const pagesStr = inputValues.pagesToRemove || '';
           const pagesToDelete = pagesStr.split(',').map((p: string) => parseInt(p.trim()) - 1).sort((a: number, b: number) => b - a);
@@ -50,8 +52,6 @@ class APIService {
             }
           });
         }
-        
-        // B. Rotate PDF
         else if (tool.id === 'rotate-pdf') {
           const angleInput = inputValues.rotationAngle || '90';
           let rotationDegrees = 90;
@@ -63,20 +63,10 @@ class APIService {
             page.setRotation(degrees(page.getRotation().angle + rotationDegrees));
           });
         }
-
-        // C. PDF to JPG Converter Live Preview Generation
         else if (tool.id === 'pdf-to-jpg') {
           successMessage = `### 🖼️ PDF to JPG Conversion Complete\n\n**Tool Executed:** ${tool.name}\n✅ All pages from your PDF have been extracted into high-resolution JPG images.`;
-          // Generate a visual representation preview for the converted pages
-          previewImageUrl = `https://image.pollinations.ai/prompt/professional%20document%20page%20preview%20rendered%20as%20high%20quality%20jpg?width=800&height=1000&nologo=true&seed=${Date.now()}`;
         }
 
-        // D. Compress PDF
-        else if (tool.id === 'compress-pdf') {
-          successMessage = `### ⚡ PDF Compression Complete\n\n**Tool Executed:** ${tool.name}\n✅ File size optimized successfully without noticeable quality loss.`;
-        }
-
-        // Generate modified file blob
         const modifiedPdfBytes = await pdfDoc.save();
         const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
         const fileUrl = URL.createObjectURL(blob);
@@ -86,7 +76,7 @@ class APIService {
           output: successMessage, 
           textOutput: successMessage, 
           fileUrl: fileUrl, 
-          imageUrl: previewImageUrl, // 🚀 Pass image preview so it shows up in preview panel
+          imageUrl: previewImageUrl, 
           executionTimeMs: Date.now() - startTime, 
           provider: 'DocuCore Engine (pdf-lib)',
         };
@@ -95,7 +85,6 @@ class APIService {
       }
     }
 
-    // 2. IMAGE AI / MEDIA
     const outType = tool.outputType;
     if (outType === 'image' || cat.includes('image')) {
       const cleanPrompt = encodeURIComponent(`ultra detailed 8k photo of ${safePrompt}, professional`);
@@ -110,7 +99,6 @@ class APIService {
       return { success: true, output: audioUrl, audioUrl, executionTimeMs: Date.now() - startTime };
     }
 
-    // 3. DEFAULT TEXT/CALC
     const textResult = `### ✅ Task Completed\n\nYour request for ${tool.name} was completed successfully. Inputs evaluated: ${safePrompt}`;
     return { success: true, output: textResult, textOutput: textResult, executionTimeMs: Date.now() - startTime };
   }
