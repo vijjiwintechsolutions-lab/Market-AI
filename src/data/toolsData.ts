@@ -1,22 +1,21 @@
 import { AITool, ToolCategory } from '../types';
 
 export const CATEGORIES_LIST: ToolCategory[] = [
-  'Image Tools (AI & Utility)',
-  'Video Tools (AI & Utility)',
-  'Audio Tools (AI & Utility)',
+  'Image Tools',
+  'Video Tools',
+  'Audio Tools',
   'PDF & Document Tools',
   'Calculators & Finance',
   'Coding & Web Tools',
   'Text & Marketing Tools'
 ];
 
-// 1. CORE REAL UNIQUE TOOLS
+// 1. CORE REAL UNIQUE TOOLS (CLEAN NAMES)
 const UNIQUE_CORE_TOOLS: AITool[] = [
-  // --- NON-AI MEDIA UTILITIES ---
   {
     id: 'ringtone-audio-cutter',
-    name: 'Audio & Ringtone Cutter (Non-AI)',
-    category: 'Audio Tools (AI & Utility)',
+    name: 'Audio & Ringtone Cutter',
+    category: 'Audio Tools',
     subcategory: 'Audio Editing',
     provider: 'WebAudio Core Engine',
     modelUsed: 'browser-webaudio-v1',
@@ -34,8 +33,8 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
   },
   {
     id: 'video-cutter-trimmer',
-    name: 'Instant Video Trimmer & Cutter (Non-AI)',
-    category: 'Video Tools (AI & Utility)',
+    name: 'Instant Video Trimmer & Cutter',
+    category: 'Video Tools',
     subcategory: 'Video Editing',
     provider: 'FFmpeg WASM Engine',
     modelUsed: 'ffmpeg-wasm-core',
@@ -51,11 +50,9 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
     ],
     outputType: 'video'
   },
-
-  // --- PDF & DOCUMENT NON-AI UTILITIES ---
   {
     id: 'pdf-page-remover-organizer',
-    name: 'PDF Page Add, Remove & Split (Non-AI)',
+    name: 'PDF Page Add, Remove & Split',
     category: 'PDF & Document Tools',
     subcategory: 'PDF Utilities',
     provider: 'PDF-Lib Local Engine',
@@ -91,7 +88,7 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
   },
   {
     id: 'pdf-lock-remover',
-    name: 'PDF Password Unlocker (Non-AI)',
+    name: 'PDF Password Unlocker',
     category: 'PDF & Document Tools',
     subcategory: 'PDF Security',
     provider: 'PDF Security Core',
@@ -108,29 +105,8 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
     outputType: 'text'
   },
   {
-    id: 'pdf-seal-signature-attacher',
-    name: 'PDF Seal & Digital Signature Stamping (Non-AI)',
-    category: 'PDF & Document Tools',
-    subcategory: 'PDF Signing',
-    provider: 'SignPDF Local Core',
-    modelUsed: 'pdf-sign-v1',
-    rating: 5.0,
-    reviewCount: 6100,
-    latencyMs: 40,
-    pricing: 'Free',
-    badge: 'Popular',
-    description: 'Stamp official office seals, watermarks, or handwritten digital signatures onto PDF pages.',
-    inputs: [
-      { id: 'signText', name: 'Signature Name / Seal Text', type: 'text', required: true, defaultValue: 'Approved & Signed' },
-      { id: 'pageNumber', name: 'Apply to Page Number', type: 'text', required: true, defaultValue: '1' }
-    ],
-    outputType: 'text'
-  },
-
-  // --- CALCULATORS & FINANCE UTILITIES ---
-  {
     id: 'loan-emi-calculator-pro',
-    name: 'Loan EMI & Interest Calculator (Non-AI)',
+    name: 'Loan EMI & Interest Calculator',
     category: 'Calculators & Finance',
     subcategory: 'Finance',
     provider: 'Financial Math Core',
@@ -148,12 +124,10 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
     ],
     outputType: 'text'
   },
-
-  // --- REAL WORKING AI TOOLS ---
   {
     id: 'image-generator-pro',
     name: 'AI Text to Image Generator',
-    category: 'Image Tools (AI & Utility)',
+    category: 'Image Tools',
     subcategory: 'AI Art',
     provider: 'Google Imagen 3 / Flux',
     modelUsed: 'imagen-3.0',
@@ -168,123 +142,59 @@ const UNIQUE_CORE_TOOLS: AITool[] = [
       { id: 'aspectRatio', name: 'Aspect Ratio', type: 'select', options: ['9:16 (Reels/Story)', '1:1 (Square)', '16:9 (Landscape)'], defaultValue: '9:16 (Reels/Story)' }
     ],
     outputType: 'image'
-  },
-  {
-    id: 'bg-remover-auto',
-    name: 'Auto Background Remover',
-    category: 'Image Tools (AI & Utility)',
-    subcategory: 'Photo Editing',
-    provider: 'Cutout AI Engine',
-    modelUsed: 'u2net-bg-remover',
-    rating: 5.0,
-    reviewCount: 5120,
-    latencyMs: 180,
-    pricing: 'Free',
-    badge: 'Instant',
-    description: 'Automatically isolate subject and make background transparent.',
-    inputs: [
-      { id: 'sourceUrl', name: 'Image Drive / Web URL (Optional)', type: 'text', required: false, defaultValue: '' }
-    ],
-    outputType: 'image'
-  },
-  {
-    id: 'text-to-speech-tts',
-    name: 'AI Voice & Speech Synthesizer',
-    category: 'Audio Tools (AI & Utility)',
-    subcategory: 'Text to Speech',
-    provider: 'Kokoro Speech Engine',
-    modelUsed: 'kokoro-v1',
-    rating: 4.8,
-    reviewCount: 2900,
-    latencyMs: 220,
-    pricing: 'Free',
-    badge: 'Voice AI',
-    description: 'Convert any text or script into natural sounding voiceovers.',
-    inputs: [
-      { id: 'prompt', name: 'Text / Script to Convert', type: 'textarea', required: true, defaultValue: 'Welcome to Neural Market AI.' }
-    ],
-    outputType: 'audio'
   }
 ];
 
-// GENERATE 800+ DIVERSE ORIGINAL NAMED TOOLS (ZERO "MODULE #1" DUMMIES)
 function buildFull800OriginalTools(): AITool[] {
   const catalog: AITool[] = [...UNIQUE_CORE_TOOLS];
-
-  const functionalPrefixes = [
-    'Smart', 'Fast', 'Pro', 'Express', 'Auto', 'Precision', 'Advanced', 'Ultra'
-  ];
+  const functionalPrefixes = ['Smart', 'Fast', 'Pro', 'Express', 'Auto', 'Precision', 'Advanced', 'Ultra'];
 
   const realToolCategories = [
     {
       cat: 'PDF & Document Tools',
       sub: 'Document Suite',
       out: 'text',
-      names: [
-        'PDF Watermark Remover', 'PDF Merger Pro', 'PDF Compressor',
-        'PDF to Excel Converter', 'PDF Text Extractor', 'DocX to PDF Converter',
-        'PDF Page Numberer', 'PDF OCR Reader', 'EPUB to PDF Converter', 'PDF Legal Clause Auditor'
-      ]
+      names: ['PDF Watermark Remover', 'PDF Merger', 'PDF Compressor', 'PDF to Excel Converter', 'PDF Text Extractor']
     },
     {
       cat: 'Calculators & Finance',
       sub: 'Financial Math',
       out: 'text',
-      names: [
-        'SIP Return Calculator', 'GST & Tax Calculator', 'Compound Interest Calculator',
-        'FD Interest Calculator', 'Income Tax Slab Calculator', 'Currency Converter',
-        'Mortgage Affordability Calculator', 'Crypto Profit Calculator', 'RD Maturity Calculator', 'Inflation Rate Calculator'
-      ]
+      names: ['SIP Return Calculator', 'GST & Tax Calculator', 'Compound Interest Calculator', 'FD Interest Calculator']
     },
     {
-      cat: 'Audio Tools (AI & Utility)',
+      cat: 'Audio Tools',
       sub: 'Sound Engineering',
       out: 'audio',
-      names: [
-        'Audio Volume Booster', 'MP3 Converter', 'Vocal Remover', 'Audio Pitch Shifter',
-        'Audio Reverse Effect', 'Background Noise Cleaner', 'Audio Joiner & Merger', 'Karaoke Track Generator'
-      ]
+      names: ['Audio Volume Booster', 'MP3 Converter', 'Vocal Remover', 'Audio Pitch Shifter']
     },
     {
-      cat: 'Video Tools (AI & Utility)',
+      cat: 'Video Tools',
       sub: 'Video Editing',
       out: 'video',
-      names: [
-        'Video Speed Changer', 'Video Watermark Adder', 'MP4 to GIF Converter',
-        'Video Muter', 'Video Resolution Resizer', 'Video Frame Rate Converter', 'Video Subtitle Embedder'
-      ]
+      names: ['Video Speed Changer', 'Video Watermark Adder', 'MP4 to GIF Converter', 'Video Muter']
     },
     {
-      cat: 'Image Tools (AI & Utility)',
+      cat: 'Image Tools',
       sub: 'Graphics Suite',
       out: 'image',
-      names: [
-        'PNG to JPG Converter', 'Image Resizer & Crop', 'Image Compressor Pro',
-        'Photo Watermark Remover', 'Blur Effect Tool', 'Passport Photo Maker', 'Color Palette Extractor'
-      ]
+      names: ['PNG to JPG Converter', 'Image Resizer & Crop', 'Image Compressor Pro', 'Photo Watermark Remover']
     },
     {
       cat: 'Coding & Web Tools',
       sub: 'Developer Utilities',
       out: 'code',
-      names: [
-        'JSON Formatter & Validator', 'SQL Query Optimizer', 'React Component Generator',
-        'CSS Minifier & Unminifier', 'Base64 Encoder & Decoder', 'HTML to Tailwind Converter', 'Regex Tester Pro'
-      ]
+      names: ['JSON Formatter & Validator', 'SQL Query Optimizer', 'React Component Generator', 'CSS Minifier']
     },
     {
       cat: 'Text & Marketing Tools',
       sub: 'Copywriting & Content',
       out: 'text',
-      names: [
-        'SEO Article Generator', 'Social Media Hashtag Creator', 'Email Subject Line Enhancer',
-        'Grammar & Style Fixer', 'Word & Character Counter', 'Case Converter Pro', 'Lorem Ipsum Generator'
-      ]
+      names: ['SEO Article Generator', 'Social Media Hashtag Creator', 'Email Subject Line Enhancer']
     }
   ];
 
   let counter = 1000;
-
   realToolCategories.forEach((group) => {
     group.names.forEach((baseName) => {
       functionalPrefixes.forEach((prefix) => {
@@ -299,7 +209,7 @@ function buildFull800OriginalTools(): AITool[] {
           reviewCount: Math.floor(200 + Math.random() * 8000),
           latencyMs: Math.floor(10 + Math.random() * 80),
           pricing: 'Free',
-          description: `A fast utility tool for ${baseName.toLowerCase()} operations with browser-native execution and instant download options.`,
+          description: `A fast utility tool for ${baseName.toLowerCase()} operations with browser-native execution.`,
           inputs: [
             { id: 'prompt', name: 'Task Specification / Inputs', type: 'textarea', required: true, defaultValue: `Execute ${baseName} operation` }
           ],
