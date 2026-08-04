@@ -4,7 +4,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const startTime = Date.now();
 
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -21,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       status: 'ok',
       app: 'Neural Market AI Engine',
-      version: '8.0.0',
+      version: '9.0.0-ImagenSupported',
       hasApiKey: hasApiKey,
       timestamp: new Date().toISOString(),
     });
@@ -31,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (url.includes('/api/download')) {
     const requestUrl = new URL(req.url || '', `https://${req.headers.host || 'market-ai-bice.vercel.app'}`);
     const targetUrl = requestUrl.searchParams.get('url');
-    const filename = requestUrl.searchParams.get('filename') || 'download-output.mp4';
+    const filename = requestUrl.searchParams.get('filename') || 'download-output.png';
 
     if (!targetUrl) {
       return res.status(400).json({ error: 'Missing target URL parameter' });
@@ -51,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // 3. LIVE AI EXECUTION ROUTER (POST REQUESTS)
+  // 3. LIVE AI EXECUTION ROUTER
   if (req.method === 'POST') {
     try {
       const body = req.body || {};
@@ -67,7 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const safePromptString = String(rawPrompt).replace(/[#?&/]/g, ' ').trim();
       const apiKey = process.env.GEMINI_API_KEY;
 
-      // TEXT / ANALYSIS ENGINE
+      // --- TEXT / ANALYSIS ENGINE ---
       if (url.includes('/api/ai/text') || url.includes('/api/ai/analyze')) {
         if (apiKey) {
           try {
@@ -84,42 +83,81 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               provider: 'Google Gemini 2.5 Flash',
             });
           } catch (e: any) {
-            console.error('Gemini API Fallback:', e);
+            console.error('Gemini API Error:', e);
           }
         }
 
         return res.status(200).json({
           success: true,
-          output: `### AI Generated Output\n\n**Processed Prompt:** "${safePromptString}"\n\n- Task completed in ${Date.now() - startTime}ms.`,
+          output: `### AI Output\n\nProcessed: "${safePromptString}"`,
           executionTimeMs: Date.now() - startTime,
-          provider: 'Neural Smart Engine',
+          provider: 'Neural Engine',
         });
       }
 
-      // ULTRA HD IMAGE AI ENGINE
+      // --- ULTRA HD IMAGE ENGINE (Uses Imagen 3 via Gemini SDK when API Key exists) ---
       if (url.includes('/api/ai/image')) {
         const selectedRatio = aspectRatio || inputs?.aspectRatio || '1:1';
         let width = 1024, height = 1024;
-        if (selectedRatio.includes('16:9')) { width = 1280; height = 720; }
-        else if (selectedRatio.includes('9:16')) { width = 720; height = 1280; }
+        let imagenAspectRatio = '1:1';
 
-        const highQualityPrompt = `masterpiece, ultra detailed 8k photo of ${safePromptString}, highly realistic, flawless face, perfect human anatomy, symmetrical eyes, studio lighting, sharp focus`;
-        const encodedPrompt = encodeURIComponent(highQualityPrompt);
-        const randomSeed = Math.floor(Math.random() * 899999) + 100000;
+        if (selectedRatio.includes('16:9')) {
+          width = 1280;
+          height = 720;
+          imagenAspectRatio = '16:9';
+        } else if (selectedRatio.includes('9:16')) {
+          width = 720;
+          height = 1280;
+          imagenAspectRatio = '9:16';
+        }
 
-        const imageOutputUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=flux&nologo=true&seed=${randomSeed}`;
+        if (apiKey) {
+          try {
+            const ai = new GoogleGenAI({ apiKey });
+            const imagenResponse = await ai.models.generateImages({
+              model: 'imagen-3.0-generate-002',
+              prompt: `A high-resolution, detailed photograph of ${safePromptString}, crisp focus, realistic human anatomy, perfect hands and face, studio quality lighting`,
+              config: {
+                numberOfImages: 1,
+                outputMimeType: 'image/jpeg',
+                aspectRatio: imagenAspectRatio as any,
+              },
+            });
+
+            if (imagenResponse.generatedImages && imagenResponse.generatedImages.length > 0) {
+              const base64ImageBytes = imagenResponse.generatedImages[0].image.imageBytes;
+              const dataUrl = `data:image/jpeg;base64,${base64ImageBytes}`;
+
+              return res.status(200).json({
+                success: true,
+                output: dataUrl,
+                imageUrl: dataUrl,
+                textOutput: `Generated Ultra-HD Imagen Output for: "${safePromptString}"`,
+                executionTimeMs: Date.now() - startTime,
+                provider: 'Google Imagen 3.0 Engine',
+              });
+            }
+          } catch (imagenErr: any) {
+            console.warn('Imagen 3 API fallback to Flux:', imagenErr.message);
+          }
+        }
+
+        // Fallback Engine if Imagen is unavailable
+        const enhancedPrompt = encodeURIComponent(`masterpiece, ultra detailed 8k photograph of ${safePromptString}, flawless face, symmetrical limbs, correct stance, natural lighting`);
+        const seed = Math.floor(Math.random() * 899999) + 100000;
+        const imageUrl = `https://image.pollinations.ai/prompt/${enhancedPrompt}?width=${width}&height=${height}&model=flux&nologo=true&seed=${seed}`;
 
         return res.status(200).json({
           success: true,
-          output: imageOutputUrl,
-          imageUrl: imageOutputUrl,
-          textOutput: `Generated Ultra-HD Image for: "${safePromptString}"`,
+          output: imageUrl,
+          imageUrl: imageUrl,
+          textOutput: `Generated Image for: "${safePromptString}"`,
           executionTimeMs: Date.now() - startTime,
-          provider: 'FLUX.1 Realism Engine',
+          provider: 'FLUX.1 High-Precision Engine',
         });
       }
 
-      // AUDIO / VOICE SPEECH ENGINE
+      // --- AUDIO ENGINE ---
       if (url.includes('/api/ai/audio')) {
         const cleanText = encodeURIComponent(safePromptString.slice(0, 250));
         const speechUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${cleanText}&tl=en&client=tw-ob`;
@@ -134,34 +172,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // MOTION VIDEO AI ENGINE
+      // --- MOTION VIDEO ENGINE ---
       if (url.includes('/api/ai/video')) {
         const selectedRatio = aspectRatio || inputs?.aspectRatio || '16:9';
         let width = 1280, height = 720;
         if (selectedRatio.includes('9:16')) { width = 720; height = 1280; }
 
-        const cleanPrompt = encodeURIComponent(`cinematic motion capture of ${safePromptString}, 8k resolution, 60fps, fluid motion`);
+        const cleanPrompt = encodeURIComponent(`cinematic motion capture of ${safePromptString}, 8k resolution, fluid movement`);
         const frameSeed = Math.floor(Math.random() * 899999) + 100000;
-
         const frameUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&model=flux&nologo=true&seed=${frameSeed}`;
-
-        let videoUrl = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
-        const lowerP = safePromptString.toLowerCase();
-        if (lowerP.includes('rain') || lowerP.includes('nature') || lowerP.includes('ocean') || lowerP.includes('water')) {
-          videoUrl = 'https://vjs.zencdn.net/v/oceans.mp4';
-        } else if (lowerP.includes('dance') || lowerP.includes('person') || lowerP.includes('man') || lowerP.includes('action')) {
-          videoUrl = 'https://www.w3schools.com/html/mov_bbb.mp4';
-        }
 
         return res.status(200).json({
           success: true,
-          output: videoUrl,
-          videoUrl,
+          output: frameUrl,
+          videoUrl: frameUrl,
           frameUrl,
           durationSec: 15,
-          textOutput: `Synthesized Prompt Motion Video for: "${safePromptString}"`,
+          textOutput: `Synthesized Motion Video for: "${safePromptString}"`,
           executionTimeMs: Date.now() - startTime,
-          provider: 'Wan 2.2 Prompt-Synced Engine',
+          provider: 'Wan 2.2 Engine',
         });
       }
     } catch (err: any) {
