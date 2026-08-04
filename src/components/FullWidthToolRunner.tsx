@@ -19,18 +19,15 @@ interface FullWidthToolRunnerProps {
   onToggleCompare: (tool: AITool) => void;
 }
 
-// Named export (ఇది Vercel లో export ఎర్రర్ రాకుండా చూసుకుంటుంది)
 export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   tool, onBack, onSaveHistory, favoriteIds, onToggleFavorite,
 }) => {
-  // 1. INTELLIGENT CATEGORY DETECTION
   const isImage = tool.outputType === 'image' || tool.category?.toLowerCase().includes('image');
   const isVideo = tool.outputType === 'video' || tool.category?.toLowerCase().includes('video');
   const isAudio = tool.outputType === 'audio' || tool.category?.toLowerCase().includes('audio') || tool.category?.toLowerCase().includes('voice');
   const isPDF = tool.category?.toLowerCase().includes('pdf') || tool.category?.toLowerCase().includes('document');
   const isCalc = tool.category?.toLowerCase().includes('calc') || tool.category?.toLowerCase().includes('finance');
 
-  // 2. DYNAMIC FORMAT & UI OPTIONS
   let formatOptions = ['Plain Text (.txt)'];
   let qualityOptions = ['Standard Fast'];
   let showQuality = false;
@@ -66,7 +63,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     showUpload = false;
   }
 
-  // STATES
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -84,7 +80,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // RESET ON TOOL CHANGE
   useEffect(() => {
     const initial: Record<string, any> = {};
     tool.inputs.forEach((p) => { initial[p.id] = p.defaultValue || ''; });
@@ -105,7 +100,6 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   }, [tool.id]);
 
-  // LIVE FILE PREVIEW GENERATION
   useEffect(() => {
     if (uploadedFile) {
       const url = URL.createObjectURL(uploadedFile);
@@ -317,7 +311,16 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
             )}
 
             {/* RUNNING STATE */}
-            {isRunning && <AIProcessingState tool={tool} currentStep="Processing Request..." progressPercent={progressPercent} elapsedSec={elapsedSec} />}
+            {isRunning && (
+              <AIProcessingState 
+                tool={tool} 
+                currentStep="Processing Request..." 
+                progressPercent={progressPercent} 
+                elapsedSec={elapsedSec} 
+                inputValues={inputValues} 
+                uploadedFile={uploadedFile} 
+              />
+            )}
 
             {/* POST EXECUTION OUTPUTS */}
             {imageUrlResult && !isRunning && (
