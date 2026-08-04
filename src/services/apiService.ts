@@ -22,6 +22,51 @@ class APIService {
     return inputValues.prompt || Object.values(inputValues).find(v => typeof v === 'string' && v.trim() !== '') || defaultDescription || 'Processed Request';
   }
 
+  // 🚀 REAL CLIENT-SIDE PDF PAGE TO REAL JPEG CONVERTER USING CANVAS & PDF.JS
+  private async convertPdfToRealJpg(file: File): Promise<{ jpgUrl: string; blob: Blob }> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          // Dynamically load PDF.js CDN if not loaded
+          if (!(window as any).pdfjsLib) {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            document.head.appendChild(script);
+            await new Promise((res) => (script.onload = res));
+            (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
+              'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          }
+
+          const pdfjsLib = (window as any).pdfjsLib;
+          const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(reader.result as ArrayBuffer) }).promise;
+          const page = await pdf.getPage(1); // Render page 1 as JPG
+          
+          const viewport = page.getViewport({ scale: 2.0 }); // High DPI
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          await page.render({ canvasContext: context, viewport: viewport }).promise;
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const jpgUrl = URL.createObjectURL(blob);
+              resolve({ jpgUrl, blob });
+            } else {
+              reject(new Error('Canvas rendering failed'));
+            }
+          }, 'image/jpeg', 0.95);
+
+        } catch (e) {
+          reject(e);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
   public async executeTool({ tool, inputValues, file }: ToolExecutionParams): Promise<ToolExecutionResponse> {
     const startTime = Date.now();
     const rawPrompt = this.extractPrompt(inputValues, tool.name);
@@ -37,16 +82,20 @@ class APIService {
         let outputBlobUrl = '';
         let previewImageUrl: string | undefined = undefined;
 
-        // 🚀 PDF to JPG Converter Real Conversion Simulation / Blob generation
+        // 🚀 REAL PDF TO JPG CONVERSION
         if (tool.id === 'pdf-to-jpg') {
-          // Creating a direct image/jpeg representation or blob for correct preview & download
-          const fakeJpgBytes = new Uint8Array([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46]); // JPEG header bytes
-          const imgBlob = new Blob([fakeJpgBytes, arrayBuffer], { type: 'image/jpeg' });
-          outputBlobUrl = URL.createObjectURL(imgBlob);
-          previewImageUrl = outputBlobUrl;
-          successMessage = `### 🖼️ PDF Converted to JPG Successfully`;
+          try {
+            const { jpgUrl } = await this.convertPdfToRealJpg(file);
+            outputBlobUrl = jpgUrl;
+            previewImageUrl = jpgUrl; // Real JPEG image preview
+            successMessage = `### 🖼️ PDF Converted to High-Res JPG Successfully`;
+          } catch (err) {
+            // Fallback if PDF rendering has issues
+            const pdfBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
+            outputBlobUrl = URL.createObjectURL(pdfBlob);
+          }
         } else {
-          // Standard PDF modifications (Delete, Rotate, Compress)
+          // Standard PDF modifications
           if (tool.id === 'delete-pdf-pages') {
             const pagesStr = inputValues.pagesToRemove || '';
             const pagesToDelete = pagesStr.split(',').map((p: string) => parseInt(p.trim()) - 1).sort((a: number, b: number) => b - a);
@@ -70,7 +119,7 @@ class APIService {
           const modifiedPdfBytes = await pdfDoc.save();
           const pdfBlob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
           outputBlobUrl = URL.createObjectURL(pdfBlob);
-          previewImageUrl = URL.createObjectURL(file); // Show original/modified PDF preview
+          previewImageUrl = outputBlobUrl;
         }
 
         return {
