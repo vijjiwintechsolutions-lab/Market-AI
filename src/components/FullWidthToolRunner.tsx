@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Play, Sparkles, Check, Download, RefreshCw, Sliders, UploadCloud, X, Paperclip, FileText,
-  ZoomIn, ZoomOut, RotateCw, ChevronLeft, ChevronRight, Code, Calculator, Music, Video, Image as ImageIcon, Copy
+  ZoomIn, ZoomOut, RotateCw, ChevronLeft, ChevronRight, Code, Calculator, Music, Video, Image as ImageIcon, Copy, FileSpreadsheet
 } from 'lucide-react';
 import { AITool, ExecutionHistoryItem } from '../types';
 import { apiService } from '../services/apiService';
@@ -18,63 +18,146 @@ interface FullWidthToolRunnerProps {
   onToggleCompare: (tool: AITool) => void;
 }
 
-export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
-  tool, onBack, onSaveHistory, onSelectTool, allTools
-}) => {
+// 🚀 UNIVERSAL SMART PATTERN RESOLVER FOR ALL 800+ TOOLS
+export function resolveToolConfig(tool: AITool) {
+  const name = (tool.name || '').toLowerCase();
+  const id = (tool.id || '').toLowerCase();
   const cat = (tool.category || '').toLowerCase();
   const outType = (tool.outputType || '').toLowerCase();
 
-  const isPDF = cat.includes('pdf') || cat.includes('document');
-  const isImage = outType === 'image' || cat.includes('image');
-  const isVideo = outType === 'video' || cat.includes('video');
-  const isAudio = outType === 'audio' || cat.includes('audio') || cat.includes('voice');
-  const isCalc = cat.includes('calc') || cat.includes('finance');
-  const isCode = cat.includes('code') || cat.includes('web');
-
-  // 🚀 DYNAMIC TOOL-SPECIFIC FORMATS & BUTTON LABELS FIX
+  let showConvertDropdown = true;
   let formatOptions: string[] = [];
-  let showFormatDropdown = true;
-  let uploadLabel = 'Source File / Reference Media';
+  let defaultExt = 'pdf';
+  let uploadLabel = 'Upload Source File';
   let showUpload = true;
-  let actionButtonLabel = `Execute ${tool.name}`;
+  let actionButtonText = tool.name;
 
-  if (tool.id === 'pdf-to-jpg') {
-    formatOptions = ['JPG Image (*.jpg)', 'PNG Image (*.png)', 'TIFF (*.tiff)'];
-    uploadLabel = 'Upload PDF to Convert';
-    actionButtonLabel = 'Convert to JPG';
-  } else if (tool.id === 'compress-pdf') {
-    showFormatDropdown = false; // ❌ Hide "Convert to" dropdown for Compress PDF!
-    uploadLabel = 'Upload PDF to Compress';
-    actionButtonLabel = 'Compress PDF';
-  } else if (tool.id === 'rotate-pdf') {
-    showFormatDropdown = false;
-    uploadLabel = 'Upload PDF to Rotate';
-    actionButtonLabel = 'Rotate PDF';
-  } else if (tool.id === 'delete-pdf-pages') {
-    showFormatDropdown = false;
+  // 1. PDF TO WORD / DOC
+  if (name.includes('word') || name.includes('doc') || id.includes('word') || id.includes('doc')) {
+    showConvertDropdown = true;
+    formatOptions = ['Word Document (.docx)', 'Word Document (.doc)'];
+    defaultExt = 'docx';
     uploadLabel = 'Upload PDF Document';
-    actionButtonLabel = 'Delete Selected Pages';
-  } else if (isPDF) {
-    formatOptions = ['PDF Document (.pdf)'];
-    uploadLabel = 'Upload Source PDF Document';
-    actionButtonLabel = tool.name;
-  } else if (isImage) {
-    formatOptions = ['JPG Photo (.jpg)', 'PNG Image (.png)', 'WEBP Format (.webp)'];
-    uploadLabel = 'Upload Source Image';
-    actionButtonLabel = tool.name;
-  } else if (isVideo) {
-    formatOptions = ['MP4 Video (.mp4)', 'WEBM Video (.webm)', 'GIF Animation (.gif)'];
-    uploadLabel = 'Upload Source Video Clip';
-    actionButtonLabel = tool.name;
-  } else if (isAudio) {
-    formatOptions = ['MP3 Audio (.mp3)', 'WAV Audio (.wav)'];
-    uploadLabel = 'Upload Source Audio File';
-    actionButtonLabel = tool.name;
-  } else if (isCalc || isCode) {
-    showUpload = false;
-    showFormatDropdown = false;
-    actionButtonLabel = tool.name;
+    actionButtonText = 'Convert to Word';
   }
+  // 2. PDF TO EXCEL / CSV
+  else if (name.includes('excel') || name.includes('xls') || name.includes('csv') || id.includes('excel')) {
+    showConvertDropdown = true;
+    formatOptions = ['Excel Spreadsheet (.xlsx)', 'CSV File (.csv)'];
+    defaultExt = 'xlsx';
+    uploadLabel = 'Upload PDF Document';
+    actionButtonText = 'Convert to Excel';
+  }
+  // 3. PDF TO PPT
+  else if (name.includes('ppt') || name.includes('powerpoint') || id.includes('ppt')) {
+    showConvertDropdown = true;
+    formatOptions = ['PowerPoint Presentation (.pptx)'];
+    defaultExt = 'pptx';
+    uploadLabel = 'Upload PDF Document';
+    actionButtonText = 'Convert to PPT';
+  }
+  // 4. PDF TO JPG / IMAGE
+  else if (name.includes('jpg') || name.includes('png') || name.includes('image') || id.includes('jpg')) {
+    showConvertDropdown = true;
+    formatOptions = ['JPG Image (*.jpg)', 'PNG Image (*.png)', 'WEBP (*.webp)'];
+    defaultExt = 'jpg';
+    uploadLabel = 'Upload PDF Document';
+    actionButtonText = 'Convert to JPG';
+  }
+  // 5. CONVERT TO PDF (WORD TO PDF, EXCEL TO PDF)
+  else if (name.includes('to pdf') || id.includes('to-pdf')) {
+    showConvertDropdown = false;
+    formatOptions = ['PDF Document (.pdf)'];
+    defaultExt = 'pdf';
+    uploadLabel = 'Upload Document to Convert';
+    actionButtonText = 'Convert to PDF';
+  }
+  // 6. COMPRESS PDF
+  else if (name.includes('compress') || name.includes('shrink') || id.includes('compress')) {
+    showConvertDropdown = false; // Hide "Convert to" dropdown
+    formatOptions = ['PDF Document (.pdf)'];
+    defaultExt = 'pdf';
+    uploadLabel = 'Upload PDF to Compress';
+    actionButtonText = 'Compress PDF';
+  }
+  // 7. OTHER PDF OPERATIONS (ROTATE, DELETE, MERGE, SPLIT)
+  else if (cat.includes('pdf') || cat.includes('document')) {
+    showConvertDropdown = false;
+    formatOptions = ['PDF Document (.pdf)'];
+    defaultExt = 'pdf';
+    uploadLabel = 'Upload PDF Document';
+    if (name.includes('rotate')) actionButtonText = 'Rotate PDF';
+    else if (name.includes('delete')) actionButtonText = 'Delete Pages';
+    else if (name.includes('merge')) actionButtonText = 'Merge PDFs';
+    else if (name.includes('split')) actionButtonText = 'Split PDF';
+    else actionButtonText = 'Process PDF';
+  }
+  // 8. IMAGE UTILITIES & AI ART
+  else if (outType === 'image' || cat.includes('image')) {
+    showConvertDropdown = true;
+    formatOptions = ['JPG Photo (.jpg)', 'PNG Image (.png)', 'WEBP (.webp)'];
+    defaultExt = 'jpg';
+    uploadLabel = 'Upload Image (Optional)';
+    actionButtonText = name.includes('generator') ? 'Generate AI Image' : 'Process Image';
+  }
+  // 9. VIDEO TOOLS
+  else if (outType === 'video' || cat.includes('video')) {
+    showConvertDropdown = true;
+    formatOptions = ['MP4 Video (.mp4)', 'WEBM Video (.webm)', 'GIF Animation (.gif)'];
+    defaultExt = 'mp4';
+    uploadLabel = 'Upload Video File';
+    actionButtonText = 'Process Video';
+  }
+  // 10. AUDIO & VOICE
+  else if (outType === 'audio' || cat.includes('audio') || cat.includes('voice')) {
+    showConvertDropdown = true;
+    formatOptions = ['MP3 Audio (.mp3)', 'WAV Audio (.wav)'];
+    defaultExt = 'mp3';
+    uploadLabel = 'Upload Audio File';
+    actionButtonText = name.includes('speech') || name.includes('tts') ? 'Generate Voiceover' : 'Process Audio';
+  }
+  // 11. CALCULATORS & FINANCE
+  else if (cat.includes('calc') || cat.includes('finance')) {
+    showConvertDropdown = false;
+    showUpload = false;
+    formatOptions = ['Text Report (.txt)', 'CSV Data (.csv)'];
+    defaultExt = 'txt';
+    actionButtonText = 'Calculate Now';
+  }
+  // 12. CODING & WEB
+  else if (cat.includes('code') || cat.includes('web')) {
+    showConvertDropdown = false;
+    showUpload = false;
+    formatOptions = ['Formatted Code (.json/.js)', 'Plain Text (.txt)'];
+    defaultExt = name.includes('json') ? 'json' : 'js';
+    actionButtonText = 'Format & Validate Code';
+  }
+  // 13. TEXT & MARKETING
+  else {
+    showConvertDropdown = false;
+    showUpload = false;
+    formatOptions = ['Plain Text (.txt)', 'Markdown (.md)'];
+    defaultExt = 'txt';
+    actionButtonText = name.includes('tag') || name.includes('seo') ? 'Generate SEO Tags' : 'Generate Content';
+  }
+
+  return {
+    showConvertDropdown,
+    formatOptions,
+    defaultExt,
+    uploadLabel,
+    showUpload,
+    actionButtonText
+  };
+}
+
+export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
+  tool, onBack, onSaveHistory, onSelectTool, allTools
+}) => {
+  const config = resolveToolConfig(tool);
+
+  const cat = (tool.category || '').toLowerCase();
+  const isPDF = cat.includes('pdf') || cat.includes('document');
 
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -100,7 +183,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   useEffect(() => {
     const initial: Record<string, any> = {};
     tool.inputs.forEach((p) => { initial[p.id] = p.defaultValue || ''; });
-    if (formatOptions.length > 0) initial['outputFormat'] = formatOptions[0];
+    if (config.formatOptions.length > 0) initial['outputFormat'] = config.formatOptions[0];
     setInputValues(initial);
     setOutputResult(null); setFileDownloadUrl(null); setMediaResultUrl(null);
     setUploadedFile(null); setUploadedPreviewUrl(null);
@@ -167,8 +250,8 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
   const handleInputChange = (id: string, value: any) => setInputValues((prev) => ({ ...prev, [id]: value }));
 
   const handleExecute = async () => {
-    if (showUpload && !uploadedFile && isPDF) {
-      alert("Please upload a source file first!");
+    if (config.showUpload && !uploadedFile && isPDF) {
+      alert("Please upload a source PDF file first!");
       return;
     }
 
@@ -213,18 +296,13 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     }
   };
 
+  // 🚀 DIRECT BLOB DOWNLOADER ENGINE WITH ACCURATE EXTENSIONS (.docx, .xlsx, .jpg, .pdf)
   const handleDirectDownloadFile = async () => {
     const targetUrl = fileDownloadUrl || mediaResultUrl || uploadedPreviewUrl;
     if (!targetUrl) return;
     setIsDownloading(true);
 
-    let ext = 'pdf';
-    if (tool.id === 'pdf-to-jpg') ext = 'jpg';
-    else if (isImage) ext = 'jpg';
-    else if (isVideo) ext = 'mp4';
-    else if (isAudio) ext = 'mp3';
-
-    const filename = `${tool.id}-output.${ext}`;
+    const filename = `${tool.id}-converted.${config.defaultExt}`;
 
     try {
       const response = await fetch(targetUrl);
@@ -278,15 +356,15 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
           {/* LEFT OPTIONS */}
           <div className="lg:col-span-4 bg-[#151517] border border-white/10 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
-              <span className="text-xs font-bold uppercase text-red-400 flex items-center gap-1.5"><Sliders className="w-3.5 h-3.5" /> Options</span>
+              <span className="text-xs font-bold uppercase text-red-400 flex items-center gap-1.5"><Sliders className="w-3.5 h-3.5" /> Conversion Options</span>
             </div>
 
             {/* Conditionally Render Output Format Dropdown */}
-            {showFormatDropdown && formatOptions.length > 0 && (
+            {config.showConvertDropdown && config.formatOptions.length > 0 && (
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-200 block">Convert to:</label>
                 <select value={inputValues['outputFormat']} onChange={(e) => handleInputChange('outputFormat', e.target.value)} className="w-full px-2.5 py-2 bg-[#0A0A0A] border border-white/20 rounded text-xs text-white focus:border-red-500 font-bold">
-                  {formatOptions.map((fmt) => <option key={fmt} value={fmt}>{fmt}</option>)}
+                  {config.formatOptions.map((fmt) => <option key={fmt} value={fmt}>{fmt}</option>)}
                 </select>
               </div>
             )}
@@ -304,9 +382,9 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               </div>
             ))}
 
-            {showUpload && (
+            {config.showUpload && (
               <div className="pt-2 border-t border-white/10 space-y-1.5">
-                <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5 text-red-400" /> {uploadLabel}</span>
+                <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5 text-red-400" /> {config.uploadLabel}</span>
                 {!uploadedFile ? (
                   <div onClick={() => fileInputRef.current?.click()} className="border border-dashed border-red-500/40 hover:border-red-500 bg-[#0A0A0A] rounded-lg p-3 text-center cursor-pointer transition-all">
                     <UploadCloud className="w-5 h-5 text-red-500 mx-auto mb-1" />
@@ -324,7 +402,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
             <button onClick={handleExecute} disabled={isRunning} className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-red-600/20 transition-all cursor-pointer">
               {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-white" />}
-              <span>{isRunning ? 'Processing...' : actionButtonLabel}</span>
+              <span>{isRunning ? 'Processing...' : config.actionButtonText}</span>
             </button>
           </div>
 
@@ -359,14 +437,11 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
 
               {!isRunning && !outputResult && !uploadedFile && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-12 text-center min-h-[400px]">
-                  {isPDF ? <FileText className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
-                   isImage ? <ImageIcon className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
-                   isVideo ? <Video className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
-                   isAudio ? <Music className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
-                   isCode ? <Code className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
-                   <Calculator className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" />}
+                  {config.defaultExt === 'docx' ? <FileText className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
+                   config.defaultExt === 'xlsx' ? <FileSpreadsheet className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" /> :
+                   <FileText className="w-12 h-12 text-red-500 mx-auto mb-2 animate-bounce" />}
                   <h3 className="text-white font-bold text-sm">Ready for Processing</h3>
-                  <p className="text-slate-400 text-xs mt-1">Upload a file or configure options on the left and click "{actionButtonLabel}".</p>
+                  <p className="text-slate-400 text-xs mt-1">Upload a file or configure options on the left and click "{config.actionButtonText}".</p>
                 </div>
               )}
 
@@ -380,7 +455,7 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                   </div>
                   <div className="w-full max-w-xs space-y-1">
                     <div className="flex justify-between text-xs font-bold text-slate-300">
-                      <span>Processing Engine Request...</span>
+                      <span>Converting Document...</span>
                       <span>{progressPercent}%</span>
                     </div>
                     <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
@@ -398,29 +473,8 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
                 </div>
               )}
 
-              {/* IMAGE UPLOAD PREVIEW */}
-              {uploadedFile && !isUploadedPdf && !isRunning && (
-                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center min-h-[400px] max-h-[460px]">
-                  <img src={mediaResultUrl || uploadedPreviewUrl || ''} alt="Uploaded / Result Preview" className="max-h-[380px] w-auto object-contain rounded-lg border border-white/10 shadow-2xl" />
-                  <p className="text-[10px] text-emerald-400 font-bold mt-2">✨ Live Image Preview Loaded</p>
-                </div>
-              )}
-
-              {/* MEDIA PREVIEW */}
-              {!uploadedFile && mediaResultUrl && !isRunning && (
-                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center min-h-[400px]">
-                  {isImage ? (
-                    <img src={mediaResultUrl} alt="Output Preview" className="max-h-[380px] w-auto object-contain rounded-lg border border-white/10 shadow-2xl" />
-                  ) : isVideo ? (
-                    <video src={mediaResultUrl} controls className="max-h-[380px] w-full rounded-lg border border-white/10" />
-                  ) : isAudio ? (
-                    <audio src={mediaResultUrl} controls className="w-full max-w-md my-auto" />
-                  ) : null}
-                </div>
-              )}
-
-              {/* TEXT / CODE OUTPUT VIEWER */}
-              {outputResult && !isUploadedPdf && !mediaResultUrl && !isRunning && (
+              {/* TEXT / OUTPUT VIEWER */}
+              {outputResult && !isUploadedPdf && !isRunning && (
                 <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-4 min-h-[400px] max-h-[440px] overflow-y-auto text-xs font-mono text-slate-200 leading-relaxed whitespace-pre-wrap relative">
                   <button onClick={() => { navigator.clipboard.writeText(outputResult); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="absolute top-3 right-3 px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-[10px] font-bold text-slate-300 flex items-center gap-1 cursor-pointer">
                     <Copy className="w-3 h-3" /> {copied ? 'Copied!' : 'Copy'}
@@ -430,12 +484,12 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               )}
             </div>
 
-            {/* DIRECT DOWNLOAD BUTTON */}
+            {/* DIRECT DOWNLOAD BUTTON WITH SPECIFIC EXTENSION (.DOCX / .XLSX / .JPG) */}
             {(fileDownloadUrl || mediaResultUrl || uploadedPreviewUrl) && !isRunning && (
               <div className="mt-3 pt-3 border-t border-white/10">
                 <button onClick={handleDirectDownloadFile} disabled={isDownloading} className="w-full py-3.5 px-4 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-xl shadow-red-600/30 transition-all">
                   {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  <span>{isDownloading ? 'Downloading File...' : 'Download Output File'}</span>
+                  <span>{isDownloading ? 'Downloading File...' : `Download Converted .${config.defaultExt.toUpperCase()} File`}</span>
                 </button>
               </div>
             )}
