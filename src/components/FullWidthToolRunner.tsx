@@ -1,17 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  ArrowLeft, 
-  Play, 
-  Sparkles, 
-  Copy, 
-  Check, 
-  Download, 
-  RefreshCw, 
-  Sliders, 
-  UploadCloud, 
-  X, 
-  Paperclip, 
-  Volume2
+  ArrowLeft, Play, Sparkles, Copy, Check, Download, RefreshCw, Sliders, UploadCloud, X, Paperclip, Volume2, Eye
 } from 'lucide-react';
 import { AITool, ExecutionHistoryItem } from '../types';
 import { apiService } from '../services/apiService';
@@ -31,20 +20,14 @@ interface FullWidthToolRunnerProps {
 }
 
 export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
-  tool,
-  onBack,
-  onSaveHistory,
-  favoriteIds,
-  onToggleFavorite,
+  tool, onBack, onSaveHistory, favoriteIds, onToggleFavorite,
 }) => {
-  // 1. INTELLIGENT CATEGORY DETECTION
   const isImage = tool.outputType === 'image' || tool.category?.toLowerCase().includes('image');
   const isVideo = tool.outputType === 'video' || tool.category?.toLowerCase().includes('video');
   const isAudio = tool.outputType === 'audio' || tool.category?.toLowerCase().includes('audio') || tool.category?.toLowerCase().includes('voice');
   const isPDF = tool.category?.toLowerCase().includes('pdf') || tool.category?.toLowerCase().includes('document');
   const isCalc = tool.category?.toLowerCase().includes('calculator') || tool.category?.toLowerCase().includes('finance');
 
-  // 2. DYNAMIC FORMAT OPTIONS
   let formatOptions = ['Plain Text (.txt)'];
   let qualityOptions = ['Standard Fast'];
   let showQuality = false;
@@ -68,49 +51,32 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     uploadLabel = 'Upload Audio File (Optional)';
   } else if (isPDF) {
     formatOptions = ['PDF Document (.pdf)'];
-    showQuality = false; // Hide 8K options for PDF
+    showQuality = false;
     uploadLabel = 'Upload PDF Document (Required)';
   } else if (isCalc) {
     formatOptions = ['Plain Text (.txt)', 'CSV Data (.csv)'];
     showQuality = false;
-    showUpload = false; // Calculators don't need file uploads
-  } else {
-    // Coding / Text / Marketing
-    formatOptions = ['Plain Text (.txt)', 'Markdown (.md)', 'JSON (.json)'];
-    showQuality = false;
-    showUpload = false; // Generally text tools don't need uploads unless specified
+    showUpload = false;
   }
 
-  const [inputValues, setInputValues] = useState<Record<string, any>>(() => {
-    const initial: Record<string, any> = {};
-    tool.inputs.forEach((param) => {
-      initial[param.id] = param.defaultValue !== undefined ? param.defaultValue : '';
-    });
-    initial['outputFormat'] = formatOptions[0];
-    initial['quality'] = qualityOptions[0];
-    return initial;
-  });
-
+  const [inputValues, setInputValues] = useState<Record<string, any>>({});
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [outputResult, setOutputResult] = useState<string | null>(null);
   const [imageUrlResult, setImageUrlResult] = useState<string | null>(null);
   const [videoUrlResult, setVideoUrlResult] = useState<string | null>(null);
   const [audioUrlResult, setAudioUrlResult] = useState<string | null>(null);
-  const [videoPosterUrl, setVideoPosterUrl] = useState<string | null>(null);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [elapsedSec, setElapsedSec] = useState<number>(0);
   const [copied, setCopied] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const initial: Record<string, any> = {};
-    tool.inputs.forEach((param) => {
-      initial[param.id] = param.defaultValue !== undefined ? param.defaultValue : '';
-    });
+    tool.inputs.forEach((p) => { initial[p.id] = p.defaultValue || ''; });
     initial['outputFormat'] = formatOptions[0];
     initial['quality'] = qualityOptions[0];
     setInputValues(initial);
@@ -118,130 +84,64 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
     setImageUrlResult(null);
     setVideoUrlResult(null);
     setAudioUrlResult(null);
-    setVideoPosterUrl(null);
     setUploadedFile(null);
+    setPreviewUrl(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    if (window.history && window.history.pushState) {
-      window.history.pushState({}, '', `/tools/${tool.id}`);
-    }
   }, [tool.id]);
 
-  const handleInputChange = (id: string, value: any) => {
-    setInputValues((prev) => ({ ...prev, [id]: value }));
-  };
+  // Generate real-time preview URL for uploaded files
+  useEffect(() => {
+    if (uploadedFile) {
+      const url = URL.createObjectURL(uploadedFile);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [uploadedFile]);
+
+  const handleInputChange = (id: string, value: any) => setInputValues((prev) => ({ ...prev, [id]: value }));
 
   const handleExecute = async () => {
     setIsRunning(true);
-    setOutputResult(null);
-    setImageUrlResult(null);
-    setVideoUrlResult(null);
-    setAudioUrlResult(null);
-    setProgressPercent(10);
-    setElapsedSec(0);
+    setOutputResult(null); setImageUrlResult(null); setVideoUrlResult(null); setAudioUrlResult(null);
+    setProgressPercent(10); setElapsedSec(0);
     const startTime = Date.now();
-
-    const progressInterval = setInterval(() => setProgressPercent((prev) => (prev < 95 ? prev + 5 : prev)), 100);
-    const timerInterval = setInterval(() => setElapsedSec((prev) => parseFloat((prev + 0.1).toFixed(1))), 100);
+    const progressInt = setInterval(() => setProgressPercent((p) => (p < 95 ? p + 5 : p)), 100);
+    const timerInt = setInterval(() => setElapsedSec((p) => parseFloat((p + 0.1).toFixed(1))), 100);
 
     try {
       const res = await apiService.executeTool({ tool, inputValues });
-      const elapsed = Date.now() - startTime;
-      setExecutionTime(res.executionTimeMs || elapsed);
-
+      setExecutionTime(res.executionTimeMs || Date.now() - startTime);
       if (res.success) {
         setProgressPercent(100);
-        if (isVideo || res.videoUrl) {
-          setVideoUrlResult(res.videoUrl || null);
-          setVideoPosterUrl(res.frameUrl || null);
-        } else if (isImage || res.imageUrl) {
-          setImageUrlResult(res.imageUrl || null);
-        } else if (isAudio || res.audioUrl) {
-          setAudioUrlResult(res.audioUrl || null);
-        } else {
-          setOutputResult(res.textOutput || String(res.output || ''));
-        }
-
-        onSaveHistory({
-          id: `hist-${Date.now()}`,
-          toolId: tool.id,
-          toolName: tool.name,
-          prompt: apiService.extractPrompt(inputValues, tool.name),
-          output: String(res.output).substring(0, 300),
-          timestamp: new Date().toLocaleTimeString(),
-          executionTimeMs: res.executionTimeMs || elapsed,
-          outputType: tool.outputType,
-        });
+        if (isVideo || res.videoUrl) setVideoUrlResult(res.videoUrl || null);
+        else if (isImage || res.imageUrl) setImageUrlResult(res.imageUrl || null);
+        else if (isAudio || res.audioUrl) setAudioUrlResult(res.audioUrl || null);
+        else setOutputResult(res.textOutput || String(res.output || ''));
       }
-    } catch (err: any) {
-      console.error('Execution error:', err);
-    } finally {
-      clearInterval(progressInterval);
-      clearInterval(timerInterval);
-      setIsRunning(false);
-    }
-  };
-
-  const handleDirectDownloadMedia = async (mediaUrl: string | null) => {
-    if (!mediaUrl) return;
-    setIsDownloading(true);
-
-    const selectedFormat = inputValues['outputFormat'] || '';
-    let ext = 'png';
-    if (selectedFormat.includes('.jpg')) ext = 'jpg';
-    else if (selectedFormat.includes('.webp')) ext = 'webp';
-    else if (selectedFormat.includes('.mp4')) ext = 'mp4';
-    else if (selectedFormat.includes('.webm')) ext = 'webm';
-    else if (selectedFormat.includes('.mp3')) ext = 'mp3';
-    else if (selectedFormat.includes('.wav')) ext = 'wav';
-    else if (selectedFormat.includes('.pdf')) ext = 'pdf';
-
-    const filename = `${tool.id}-output.${ext}`;
-
-    try {
-      const res = await fetch(mediaUrl);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      const link = document.createElement('a');
-      link.href = mediaUrl;
-      link.target = '_blank';
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      console.error(err);
     } finally {
-      setIsDownloading(false);
+      clearInterval(progressInt); clearInterval(timerInt); setIsRunning(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#E0E0E0] pb-12 font-mono">
       <div className="bg-[#151517] border-b border-white/10 px-4 py-3 flex items-center justify-between">
-        <button onClick={onBack} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold rounded cursor-pointer">
+        <button onClick={onBack} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold rounded">
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Marketplace
         </button>
-        <span className="text-[10px] text-slate-400 font-bold hidden sm:block">Route: /tools/{tool.id}</span>
       </div>
 
       <div className="w-full px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
-        <div className="bg-[#151517] border border-white/10 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-[#151517] border border-white/10 rounded-lg p-5 flex flex-col sm:flex-row justify-between gap-4">
           <div>
             <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-indigo-600/30 text-indigo-300 border border-indigo-500/40">{tool.category}</span>
             <h1 className="text-2xl font-extrabold text-white mt-1">{tool.name}</h1>
             <p className="text-xs text-slate-300 mt-1">{tool.description}</p>
           </div>
-          <button onClick={() => onToggleFavorite(tool.id)} className={`px-3 py-2 rounded text-xs font-bold border whitespace-nowrap ${favoriteIds.includes(tool.id) ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-white/5 text-slate-300 border-white/10'}`}>
-            {favoriteIds.includes(tool.id) ? 'Saved to Library' : 'Save Tool'}
-          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -255,136 +155,100 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({
               <div key={param.id} className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-200 block">{param.name}</label>
                 {param.type === 'textarea' || param.type === 'text' ? (
-                  <textarea
-                    rows={param.type === 'textarea' ? 3 : 1}
-                    value={inputValues[param.id] || ''}
-                    onChange={(e) => handleInputChange(param.id, e.target.value)}
-                    className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500 focus:outline-none"
-                  />
+                  <textarea rows={param.type === 'textarea' ? 3 : 1} value={inputValues[param.id] || ''} onChange={(e) => handleInputChange(param.id, e.target.value)} className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500 focus:outline-none" />
                 ) : param.type === 'select' ? (
-                  <select
-                    value={inputValues[param.id] || param.options?.[0]}
-                    onChange={(e) => handleInputChange(param.id, e.target.value)}
-                    className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500 font-mono cursor-pointer"
-                  >
+                  <select value={inputValues[param.id] || param.options?.[0]} onChange={(e) => handleInputChange(param.id, e.target.value)} className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500 font-mono">
                     {param.options?.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 ) : null}
               </div>
             ))}
 
-            {/* DYNAMIC FILE UPLOAD (Hidden for Calculators/Text tools) */}
             {showUpload && (
               <div className="pt-3 border-t border-white/10 space-y-2">
                 <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5 text-indigo-400" /> {uploadLabel}</span>
                 {!uploadedFile ? (
                   <div onClick={() => fileInputRef.current?.click()} className="border border-dashed border-white/20 hover:border-indigo-500 bg-[#0A0A0A] rounded p-3 text-center cursor-pointer">
                     <UploadCloud className="w-5 h-5 text-indigo-400 mx-auto mb-1" />
-                    <p className="text-xs text-slate-300">Click to browse or Drag & Drop</p>
+                    <p className="text-xs text-slate-300">Click to browse or Drag & Drop File</p>
                     <input type="file" ref={fileInputRef} onChange={(e) => e.target.files?.[0] && setUploadedFile(e.target.files[0])} className="hidden" />
                   </div>
                 ) : (
                   <div className="p-2 bg-[#0A0A0A] border border-indigo-500/40 rounded flex items-center justify-between text-xs">
                     <span className="truncate text-white">{uploadedFile.name}</span>
-                    <button onClick={() => setUploadedFile(null)} className="text-rose-400 p-1 hover:bg-rose-500/20 rounded"><X className="w-4 h-4" /></button>
+                    <button onClick={() => setUploadedFile(null)} className="text-rose-400 p-1 hover:bg-rose-500/20"><X className="w-4 h-4" /></button>
                   </div>
                 )}
               </div>
             )}
 
-            {/* DYNAMIC FORMAT & QUALITY SETTINGS */}
             <div className={`grid ${showQuality ? 'grid-cols-2' : 'grid-cols-1'} gap-2 pt-3 border-t border-white/10`}>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 block">Download Format</label>
-                <select
-                  value={inputValues['outputFormat']}
-                  onChange={(e) => handleInputChange('outputFormat', e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500 font-mono cursor-pointer"
-                >
-                  {formatOptions.map((fmt) => (
-                    <option key={fmt} value={fmt}>{fmt}</option>
-                  ))}
+                <select value={inputValues['outputFormat']} onChange={(e) => handleInputChange('outputFormat', e.target.value)} className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white">
+                  {formatOptions.map((fmt) => <option key={fmt} value={fmt}>{fmt}</option>)}
                 </select>
               </div>
-
               {showQuality && (
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 block">Quality Preset</label>
-                  <select
-                    value={inputValues['quality']}
-                    onChange={(e) => handleInputChange('quality', e.target.value)}
-                    className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-indigo-500 font-mono cursor-pointer"
-                  >
-                    {qualityOptions.map((q) => (
-                      <option key={q} value={q}>{q}</option>
-                    ))}
+                  <label className="text-[10px] font-bold text-slate-400 block">Quality</label>
+                  <select value={inputValues['quality']} onChange={(e) => handleInputChange('quality', e.target.value)} className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white">
+                    {qualityOptions.map((q) => <option key={q} value={q}>{q}</option>)}
                   </select>
                 </div>
               )}
             </div>
 
-            <button onClick={handleExecute} disabled={isRunning} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 cursor-pointer mt-4">
+            <button onClick={handleExecute} disabled={isRunning} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 mt-4">
               {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-white" />}
               <span>{isRunning ? 'Processing Request...' : 'Execute Tool'}</span>
             </button>
           </div>
 
-          {/* GENERATED OUTPUT (RIGHT) */}
-          <div className="lg:col-span-7 bg-[#151517] border border-white/10 rounded-lg p-5 min-h-[400px] flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <span className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5"><Sparkles className="w-4 h-4" /> Live Output</span>
-                {executionTime && <span className="text-green-400 text-[11px] bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 font-bold">{executionTime}ms</span>}
-              </div>
-
-              {isRunning && <AIProcessingState tool={tool} currentStep="Generating Process..." progressPercent={progressPercent} elapsedSec={elapsedSec} uploadedFile={uploadedFile} inputValues={inputValues} />}
-
-              {/* IMAGE OUTPUT */}
-              {imageUrlResult && !isRunning && (
-                <div className="space-y-3">
-                  <div className="rounded border border-white/10 bg-[#0A0A0A] p-2 flex items-center justify-center min-h-[320px]">
-                    <img src={imageUrlResult} alt="Generated Output" className="w-full h-auto max-h-[440px] object-contain rounded" />
-                  </div>
-                  <button onClick={() => handleDirectDownloadMedia(imageUrlResult)} disabled={isDownloading} className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase rounded shadow flex items-center justify-center gap-2 cursor-pointer">
-                    {isDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                    <span>{isDownloading ? 'Downloading...' : `Download ${inputValues['outputFormat'] || 'Media'}`}</span>
-                  </button>
-                </div>
-              )}
-
-              {/* VIDEO OUTPUT */}
-              {videoUrlResult && !isRunning && (
-                <AIVideoPlayer
-                  videoUrl={videoUrlResult}
-                  posterUrl={videoPosterUrl || undefined}
-                  promptText={inputValues.prompt || tool.name}
-                  durationSec={15}
-                  toolName={tool.name}
-                  onDownload={() => handleDirectDownloadMedia(videoUrlResult)}
-                />
-              )}
-
-              {/* AUDIO OUTPUT */}
-              {audioUrlResult && !isRunning && (
-                <div className="space-y-3 p-4 bg-[#0A0A0A] border border-white/10 rounded text-center">
-                  <Volume2 className="w-8 h-8 text-indigo-400 mx-auto" />
-                  <audio controls src={audioUrlResult} className="w-full" autoPlay />
-                  <button onClick={() => handleDirectDownloadMedia(audioUrlResult)} className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2 cursor-pointer">
-                    <Download className="w-4 h-4" /> Download Audio
-                  </button>
-                </div>
-              )}
-
-              {/* TEXT / PDF / CALC OUTPUT */}
-              {outputResult && !imageUrlResult && !videoUrlResult && !audioUrlResult && !isRunning && (
-                <div className="space-y-3">
-                  <div className="bg-[#0A0A0A] border border-white/10 rounded p-4 text-xs text-slate-200 whitespace-pre-wrap max-h-[380px] overflow-y-auto leading-relaxed">{outputResult}</div>
-                  <button onClick={() => { navigator.clipboard.writeText(outputResult); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="w-full py-2 bg-white/5 hover:bg-white/10 text-slate-200 text-xs font-bold rounded border border-white/10 flex items-center justify-center gap-2 cursor-pointer">
-                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />} <span>{copied ? 'Copied!' : 'Copy Result'}</span>
-                  </button>
-                </div>
-              )}
+          {/* GENERATED OUTPUT & LIVE PREVIEW (RIGHT) */}
+          <div className="lg:col-span-7 bg-[#151517] border border-white/10 rounded-lg p-5 min-h-[500px] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+              <span className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+                {previewUrl && !outputResult && !imageUrlResult ? <Eye className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />} 
+                {previewUrl && !outputResult && !imageUrlResult ? 'Live File Preview' : 'Live Output'}
+              </span>
             </div>
+
+            {/* LIVE DOCUMENT/IMAGE PREVIEW BEFORE EXECUTION */}
+            {!isRunning && !outputResult && !imageUrlResult && !videoUrlResult && previewUrl && (
+              <div className="flex-1 w-full bg-[#0A0A0A] border border-white/10 rounded overflow-hidden flex items-center justify-center">
+                {uploadedFile?.type === 'application/pdf' ? (
+                  <object data={previewUrl} type="application/pdf" className="w-full h-full min-h-[450px]">
+                    <p className="text-slate-400 text-xs p-4">Unable to display PDF preview. Please download to view.</p>
+                  </object>
+                ) : uploadedFile?.type.startsWith('image/') ? (
+                  <img src={previewUrl} alt="Preview" className="w-full h-auto max-h-[450px] object-contain" />
+                ) : (
+                  <span className="text-slate-400 text-xs p-4">Preview not available for this file type.</span>
+                )}
+              </div>
+            )}
+
+            {/* RESULTS AFTER EXECUTION */}
+            {isRunning && <AIProcessingState tool={tool} currentStep="Generating Process..." progressPercent={progressPercent} elapsedSec={elapsedSec} />}
+
+            {imageUrlResult && !isRunning && (
+              <div className="space-y-3 w-full">
+                <img src={imageUrlResult} alt="Generated Output" className="w-full h-auto max-h-[440px] object-contain rounded" />
+              </div>
+            )}
+            
+            {/* CLEAN TEXT/PDF OUTPUT WITHOUT CONSOLE LOG */}
+            {outputResult && !imageUrlResult && !videoUrlResult && !isRunning && (
+              <div className="space-y-3 w-full">
+                <div className="bg-[#0A0A0A] border border-emerald-500/30 rounded p-5 text-sm text-slate-200 whitespace-pre-wrap leading-relaxed shadow-lg shadow-emerald-500/5">
+                  {outputResult}
+                </div>
+                <button className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase rounded flex items-center justify-center gap-2">
+                  <Download className="w-4 h-4" /> Download Processed File
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
