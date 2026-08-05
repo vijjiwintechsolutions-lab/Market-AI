@@ -10,7 +10,7 @@ export const CATEGORIES_LIST: ToolCategory[] = [
   'Text & Marketing Tools'
 ];
 
-// 🚀 CORE HAND-CRAFTED REAL-WORLD TOOLS WITH CLEAN NAMES
+// 🚀 CORE HAND-CRAFTED REAL-WORLD TOOLS
 const HANDCRAFTED_TOOLS: AITool[] = [
   {
     id: 'pdf-to-jpg',
@@ -74,6 +74,7 @@ const HANDCRAFTED_TOOLS: AITool[] = [
     pricing: 'Free',
     description: 'Reduce PDF file size without sacrificing visual document quality.',
     inputs: [
+      { id: 'targetSizeKb', name: 'Target Size (in KB)', type: 'text', required: true, defaultValue: '500' },
       { id: 'compressionLevel', name: 'Compression Level', type: 'select', options: ['Basic Compression (-40%)', 'Extreme Compression (-70%)'], defaultValue: 'Basic Compression (-40%)' }
     ],
     outputType: 'text'
@@ -169,71 +170,20 @@ const HANDCRAFTED_TOOLS: AITool[] = [
   }
 ];
 
-// 🚀 CLEAN DYNAMIC CATALOG GENERATOR (NO DUPLICATES & NO #1, #2 NUMBERS)
+// 🚀 DYNAMIC GENERATOR
 function generateCleanToolCatalog(): AITool[] {
   const catalog: AITool[] = [...HANDCRAFTED_TOOLS];
   const existingNames = new Set<string>(catalog.map(t => t.name.toLowerCase()));
-
   const descriptors = ['Smart', 'Batch', 'AI', 'Instant', 'Precision', 'Vector', 'Fast', 'HD', 'Cloud', 'Interactive', 'Automated', 'Custom'];
 
   const categoryToolDefinitions = [
-    {
-      cat: 'PDF & Document Tools',
-      bases: [
-        'PDF to Excel Converter', 'Excel to PDF Converter', 'PDF to PowerPoint Converter', 'PowerPoint to PDF Converter',
-        'PDF Watermark Remover', 'Add PDF Watermark', 'PDF Page Numberer', 'PDF Password Protect', 'Unlock PDF Password',
-        'PDF OCR Text Extractor', 'Split PDF by Page Range', 'PDF Metadata Editor', 'PDF Page Crop Tool', 'PDF Color Inverter',
-        'PDF Signature Stamper', 'PDF Form Filler', 'PDF Redaction Tool', 'Scanned PDF Repair', 'PDF Page Reorder'
-      ]
-    },
-    {
-      cat: 'Image Tools (AI & Utility)',
-      bases: [
-        'Background Remover', 'Image Upscaler 8K', 'Photo Enhancer', 'AI Avatar Generator', 'Vector Tracing Converter',
-        'Colorize Black and White Photo', 'Face Swap Studio', 'Object Removal Tool', 'Image Compressor', 'PNG to WEBP Converter',
-        'Image Resizer & Cropper', 'Passport Photo Maker', 'AI Blur Background', 'Image Watermark Maker', 'Photo Cartoonizer'
-      ]
-    },
-    {
-      cat: 'Video Tools (AI & Utility)',
-      bases: [
-        'Video Trimmer & Cutter', 'MP4 to GIF Converter', 'Auto Subtitle Generator', 'Video Upscaler 4K', 'Background Noise Reducer',
-        'Video Speed Controller', 'Watermark Remover Video', 'Video Compressor', 'Extract Audio from Video', 'Video Frame Extractor',
-        'Video Aspect Ratio Changer', 'Video Stabilizer', 'Video Color Grader', 'AI Video Thumbnail Creator'
-      ]
-    },
-    {
-      cat: 'Audio Tools (AI & Utility)',
-      bases: [
-        'AI Text to Speech Voiceover', 'Voice Isolator & Vocal Remover', 'Audio Cutter & Joiner', 'Background Noise Suppressor',
-        'Audio Format Converter (MP3/WAV)', 'Podcast Audio Enhancer', 'Voice Pitch & Speed Changer', 'Audio Equalizer Balancer',
-        'AI Music Separator', 'Audio Volume Normalizer'
-      ]
-    },
-    {
-      cat: 'Calculators & Finance',
-      bases: [
-        'SIP Return Calculator', 'GST Tax Calculator', 'Income Tax Slab Calculator', 'Crypto Profit Calculator',
-        'Compound Interest Calculator', 'Fixed Deposit (FD) Calculator', 'Rent vs Buy Housing Calculator', 'Mutual Fund Return Calc',
-        'PPF Interest Calculator', 'Inflation Adjustment Calculator', 'Car Loan EMI Calculator'
-      ]
-    },
-    {
-      cat: 'Coding & Web Tools',
-      bases: [
-        'JSON Formatter & Validator', 'CSS Gradient Code Generator', 'Regex Expression Tester', 'SQL Query Optimizer',
-        'HTML to React JSX Converter', 'Mock API Response Generator', 'TypeScript Interface Generator', 'Base64 Encoder & Decoder',
-        'URL Encoder & Decoder', 'JWT Token Inspector', 'Tailwind CSS Class Helper'
-      ]
-    },
-    {
-      cat: 'Text & Marketing Tools',
-      bases: [
-        'AI Blog Article Writer', 'Grammar & Spell Checker', 'Email Copywriter Studio', 'Instagram Hashtag Generator',
-        'Text Summarizer Pro', 'Plagiarism Detector', 'Article Rewriter & Paraphraser', 'MetaData Tag Generator',
-        'Cold Email Prospecting Copy', 'Ad Copy Generator for Meta'
-      ]
-    }
+    { cat: 'PDF & Document Tools', bases: ['Split PDF by Page Range', 'PDF Watermark Remover', 'Add PDF Watermark', 'PDF Page Numberer', 'PDF Password Protect', 'Unlock PDF Password'] },
+    { cat: 'Image Tools (AI & Utility)', bases: ['Background Remover', 'Image Upscaler 8K', 'Photo Enhancer', 'AI Avatar Generator', 'Vector Tracing Converter'] },
+    { cat: 'Video Tools (AI & Utility)', bases: ['Video Trimmer & Cutter', 'MP4 to GIF Converter', 'Auto Subtitle Generator', 'Video Upscaler 4K', 'Background Noise Reducer'] },
+    { cat: 'Audio Tools (AI & Utility)', bases: ['AI Text to Speech Voiceover', 'Voice Isolator & Vocal Remover', 'Audio Cutter & Joiner', 'Background Noise Suppressor'] },
+    { cat: 'Calculators & Finance', bases: ['SIP Return Calculator', 'GST Tax Calculator', 'Income Tax Slab Calculator', 'Crypto Profit Calculator'] },
+    { cat: 'Coding & Web Tools', bases: ['JSON Formatter & Validator', 'CSS Gradient Code Generator', 'Regex Expression Tester', 'SQL Query Optimizer'] },
+    { cat: 'Text & Marketing Tools', bases: ['AI Blog Article Writer', 'Grammar & Spell Checker', 'Email Copywriter Studio', 'Instagram Hashtag Generator'] }
   ];
 
   categoryToolDefinitions.forEach((spec) => {
@@ -241,25 +191,14 @@ function generateCleanToolCatalog(): AITool[] {
       descriptors.forEach((prefix) => {
         const fullToolName = `${prefix} ${baseName}`;
         const cleanId = fullToolName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-
         if (!existingNames.has(fullToolName.toLowerCase())) {
           existingNames.add(fullToolName.toLowerCase());
-
           catalog.push({
-            id: cleanId,
-            name: fullToolName,
-            category: spec.cat as ToolCategory,
-            subcategory: baseName.split(' ')[0],
-            provider: 'NeuralMarket Engine',
-            modelUsed: `neural-v2.0`,
-            rating: Number((4.7 + (catalog.length % 3) * 0.1).toFixed(1)),
-            reviewCount: 2100 + (catalog.length * 15),
-            latencyMs: 15 + (catalog.length % 20),
-            pricing: 'Free',
+            id: cleanId, name: fullToolName, category: spec.cat as ToolCategory, subcategory: baseName.split(' ')[0],
+            provider: 'NeuralMarket Engine', modelUsed: `neural-v2.0`, rating: Number((4.7 + (catalog.length % 3) * 0.1).toFixed(1)),
+            reviewCount: 2100 + (catalog.length * 15), latencyMs: 15 + (catalog.length % 20), pricing: 'Free',
             description: `Professional high-speed ${baseName.toLowerCase()} designed for automated workflows.`,
-            inputs: [
-              { id: 'prompt', name: 'Input Source / Parameters', type: 'textarea', required: true, defaultValue: `Perform ${baseName}` }
-            ],
+            inputs: [{ id: 'prompt', name: 'Input Source / Parameters', type: 'textarea', required: true, defaultValue: `Perform ${baseName}` }],
             outputType: spec.cat.includes('Image') ? 'image' : spec.cat.includes('Video') ? 'video' : spec.cat.includes('Audio') ? 'audio' : 'text'
           });
         }
