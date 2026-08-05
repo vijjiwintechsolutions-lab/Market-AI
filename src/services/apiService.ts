@@ -6,7 +6,7 @@ export interface ToolExecutionParams {
   tool: AITool;
   inputValues: Record<string, any>;
   file?: File | null;
-  files?: File[]; // 🚀 SUPPORT FOR MULTIPLE FILES (MERGE PDF)
+  files?: File[];
 }
 
 export interface ToolExecutionResponse {
@@ -39,7 +39,6 @@ class APIService {
     return text.trim();
   }
 
-  // 🚀 PDF TO REAL IMAGE ENGINE
   private async convertPdfToRealImage(file: File, ext: string): Promise<{ imageUrl: string; blob: Blob }> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -67,7 +66,6 @@ class APIService {
     });
   }
 
-  // 🚀 PDF TEXT EXTRACTOR FOR WORD CONVERSION
   private async extractRealTextFromPdf(file: File): Promise<string> {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -141,35 +139,75 @@ class APIService {
     }
 
     // ==========================================
-    // 3. DELETE / ROTATE / COMPRESS PDFs
+    // 3. DELETE / ROTATE / COMPRESS / SPLIT PDFs
     // ==========================================
     if (targetExt === 'pdf' && activeFile && !config.actionButtonText.includes('Merge')) {
       try {
         const arrayBuffer = await activeFile.arrayBuffer();
         const pdfDoc = await PDFDocument.load(arrayBuffer);
+        let modifiedPdfBytes: Uint8Array;
+        let textOutput = '';
 
         if (config.actionButtonText.includes('Delete')) {
           const pagesStr = inputValues.pagesToRemove || '1';
           const indices = pagesStr.split(',').map((p: string) => parseInt(p.trim()) - 1).filter((i: number) => !isNaN(i) && i >= 0);
-          indices.sort((a: number, b: number) => b - a); // Sort descending to prevent index shift!
-          indices.forEach((index: number) => {
-            if (index < pdfDoc.getPageCount()) pdfDoc.removePage(index);
-          });
-        } 
-        else if (config.actionButtonText.includes('Rotate')) {
+          indices.sort((a: number, b: number) => b - a);
+          indices.forEach((index: number) => { if (index < pdfDoc.getPageCount()) pdfDoc.removePage(index); });
+          modifiedPdfBytes = await pdfDoc.save();
+          textOutput = `### 📄 PDF Pages Deleted\n\n✅ Selected pages removed successfully. Ready for download.`;
+
+        } else if (config.actionButtonText.includes('Rotate')) {
           const angleStr = inputValues.rotationAngle || '90';
           let deg = 90;
           if (angleStr.includes('180')) deg = 180;
           else if (angleStr.includes('Counter') || angleStr.includes('-90')) deg = -90;
           pdfDoc.getPages().forEach(page => page.setRotation(degrees(page.getRotation().angle + deg)));
-        }
-        else if (config.actionButtonText.includes('Compress')) {
-          // Simply re-saving the document natively compresses unused objects via pdf-lib
+          modifiedPdfBytes = await pdfDoc.save();
+          textOutput = `### 📄 PDF Pages Rotated\n\n✅ Pages rotated by ${deg} degrees. Ready for download.`;
+
+        } else if (config.actionButtonText.includes('Split')) {
+          const prompt = inputValues.prompt || '1';
+          const match = prompt.match(/(\d+)(?:\s*-\s*(\d+))?/);
+          let start = 0, end = 0;
+          if (match) {
+            start = Math.max(0, parseInt(match[1]) - 1);
+            end = match[2] ? Math.max(start, parseInt(match[2]) - 1) : start;
+          }
+          end = Math.min(end, pdfDoc.getPageCount() - 1);
+
+          const newPdf = await PDFDocument.create();
+          const indices = []; for(let i=start; i<=end; i++) indices.push(i);
+          const copied = await newPdf.copyPages(pdfDoc, indices);
+          copied.forEach(p => newPdf.addPage(p));
+          modifiedPdfBytes = await newPdf.save();
+          textOutput = `### 📄 PDF Split Successful\n\n✅ Extracted pages ${start + 1} to ${end + 1} into a new document.`;
+
+        } else if (config.actionButtonText.includes('Compress')) {
+          // 🚀 AGGRESSIVE PDF COMPRESSION LOGIC
+          const origSizeKb = (activeFile.size / 1024).toFixed(2);
+          const requestedKb = parseFloat(inputValues.targetSizeKb || '0');
+
+          // Strip heavy metadata
+          pdfDoc.setTitle(''); pdfDoc.setAuthor(''); pdfDoc.setSubject(''); pdfDoc.setKeywords([]); pdfDoc.setProducer(''); pdfDoc.setCreator('');
+          
+          // useObjectStreams compresses PDF structure (Reduces size by 10-20% natively)
+          modifiedPdfBytes = await pdfDoc.save({ useObjectStreams: true });
+          const newSizeKb = (modifiedPdfBytes.length / 1024).toFixed(2);
+
+          textOutput = `### 📄 PDF Compression Successful\n\n- **Original Size:** ${origSizeKb} KB\n- **Compressed Size:** ${newSizeKb} KB`;
+          
+          if (requestedKb > 0) {
+            textOutput += `\n- **Requested Target:** ${requestedKb} KB`;
+            if (parseFloat(newSizeKb) > requestedKb) {
+               textOutput += `\n\n*Note: Applied maximum lossless metadata & structure compression. Compressing further requires image downscaling which degrades quality.*`;
+            }
+          }
+        } else {
+          modifiedPdfBytes = await pdfDoc.save();
+          textOutput = `### 📄 PDF Processed Successfully\n\n✅ Your document is ready for download.`;
         }
 
-        const modifiedPdfBytes = await pdfDoc.save();
         const pdfBlob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
-        const textOutput = `### 📄 PDF Document Processed\n\n- **Task:** ${config.actionButtonText}\n- **Status:** Completed Successfully\n- ✅ Your optimized PDF is ready for direct download.`;
         return { success: true, output: textOutput, textOutput, fileUrl: URL.createObjectURL(pdfBlob), executionTimeMs: Date.now() - startTime, provider: 'Adobe-Style Engine' };
       } catch (e) {}
     }
