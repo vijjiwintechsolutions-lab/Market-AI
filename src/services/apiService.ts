@@ -39,6 +39,65 @@ class APIService {
     return text.trim();
   }
 
+  // 🚀 AGGRESSIVE PDF COMPRESSION ENGINE (RASTERIZATION FOR EXTREME LOW SIZES)
+  private async compressPdfAggressively(file: File, targetKb: number): Promise<Uint8Array> {
+    if (!(window as any).pdfjsLib) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      document.head.appendChild(script);
+      await new Promise((res) => (script.onload = res));
+      (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    const pdfjsLib = (window as any).pdfjsLib;
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+    const newPdf = await PDFDocument.create();
+
+    const origKb = file.size / 1024;
+    
+    // Dynamic quality & scale calculation based on requested target KB
+    let quality = 0.7;
+    let scale = 1.5;
+
+    if (targetKb > 0) {
+      if (targetKb <= 50) { quality = 0.3; scale = 0.7; }
+      else if (targetKb <= 100) { quality = 0.4; scale = 1.0; }
+      else if (targetKb <= 300) { quality = 0.5; scale = 1.2; }
+      else if (targetKb < origKb) { quality = 0.6; scale = 1.3; }
+    }
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        // Fill white background to prevent black background issues on transparent PDFs
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const imgDataUrl = canvas.toDataURL('image/jpeg', quality);
+        
+        const jpgImage = await newPdf.embedJpg(imgDataUrl);
+        const newPage = newPdf.addPage([viewport.width, viewport.height]);
+        
+        newPage.drawImage(jpgImage, {
+          x: 0,
+          y: 0,
+          width: viewport.width,
+          height: viewport.height,
+        });
+      }
+    }
+
+    return await newPdf.save({ useObjectStreams: true });
+  }
+
   private async convertPdfToRealImage(file: File, ext: string): Promise<{ imageUrl: string; blob: Blob }> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -112,7 +171,7 @@ class APIService {
     if ((targetExt === 'jpg' || targetExt === 'png' || targetExt === 'webp') && activeFile && activeFile.type === 'application/pdf') {
       try {
         const { imageUrl } = await this.convertPdfToRealImage(activeFile, targetExt);
-        const textOutput = `### 🖼️ Converted to Image (.${targetExt.toUpperCase()})\n\n✅ First page of the document successfully rendered into a high-quality ${targetExt.toUpperCase()} image.`;
+        const textOutput = `### 🖼️ Converted to Image (.${targetExt.toUpperCase()})\n\n- **Status:** First page rendered cleanly.\n- **Format:** High-Quality ${targetExt.toUpperCase()}`;
         return { success: true, output: textOutput, textOutput, fileUrl: imageUrl, imageUrl, executionTimeMs: Date.now() - startTime, provider: 'FormatCore Image Engine' };
       } catch (err: any) { return { success: false, output: `Error converting to image: ${err.message}`, executionTimeMs: Date.now() - startTime }; }
     }
@@ -143,68 +202,74 @@ class APIService {
     // ==========================================
     if (targetExt === 'pdf' && activeFile && !config.actionButtonText.includes('Merge')) {
       try {
-        const arrayBuffer = await activeFile.arrayBuffer();
-        const pdfDoc = await PDFDocument.load(arrayBuffer);
         let modifiedPdfBytes: Uint8Array;
         let textOutput = '';
 
-        if (config.actionButtonText.includes('Delete')) {
-          const pagesStr = inputValues.pagesToRemove || '1';
-          const indices = pagesStr.split(',').map((p: string) => parseInt(p.trim()) - 1).filter((i: number) => !isNaN(i) && i >= 0);
-          indices.sort((a: number, b: number) => b - a);
-          indices.forEach((index: number) => { if (index < pdfDoc.getPageCount()) pdfDoc.removePage(index); });
-          modifiedPdfBytes = await pdfDoc.save();
-          textOutput = `### 📄 PDF Pages Deleted\n\n✅ Selected pages removed successfully. Ready for download.`;
-
-        } else if (config.actionButtonText.includes('Rotate')) {
-          const angleStr = inputValues.rotationAngle || '90';
-          let deg = 90;
-          if (angleStr.includes('180')) deg = 180;
-          else if (angleStr.includes('Counter') || angleStr.includes('-90')) deg = -90;
-          pdfDoc.getPages().forEach(page => page.setRotation(degrees(page.getRotation().angle + deg)));
-          modifiedPdfBytes = await pdfDoc.save();
-          textOutput = `### 📄 PDF Pages Rotated\n\n✅ Pages rotated by ${deg} degrees. Ready for download.`;
-
-        } else if (config.actionButtonText.includes('Split')) {
-          const prompt = inputValues.prompt || '1';
-          const match = prompt.match(/(\d+)(?:\s*-\s*(\d+))?/);
-          let start = 0, end = 0;
-          if (match) {
-            start = Math.max(0, parseInt(match[1]) - 1);
-            end = match[2] ? Math.max(start, parseInt(match[2]) - 1) : start;
-          }
-          end = Math.min(end, pdfDoc.getPageCount() - 1);
-
-          const newPdf = await PDFDocument.create();
-          const indices = []; for(let i=start; i<=end; i++) indices.push(i);
-          const copied = await newPdf.copyPages(pdfDoc, indices);
-          copied.forEach(p => newPdf.addPage(p));
-          modifiedPdfBytes = await newPdf.save();
-          textOutput = `### 📄 PDF Split Successful\n\n✅ Extracted pages ${start + 1} to ${end + 1} into a new document.`;
-
-        } else if (config.actionButtonText.includes('Compress')) {
-          // 🚀 AGGRESSIVE PDF COMPRESSION LOGIC
+        if (config.actionButtonText.includes('Compress')) {
+          // 🚀 AGGRESSIVE PDF COMPRESSION LOGIC CALL
           const origSizeKb = (activeFile.size / 1024).toFixed(2);
           const requestedKb = parseFloat(inputValues.targetSizeKb || '0');
+          const compressionLevel = inputValues.compressionLevel || '';
 
-          // Strip heavy metadata
-          pdfDoc.setTitle(''); pdfDoc.setAuthor(''); pdfDoc.setSubject(''); pdfDoc.setKeywords([]); pdfDoc.setProducer(''); pdfDoc.setCreator('');
-          
-          // useObjectStreams compresses PDF structure (Reduces size by 10-20% natively)
-          modifiedPdfBytes = await pdfDoc.save({ useObjectStreams: true });
+          if (compressionLevel.includes('Extreme') || (requestedKb > 0 && requestedKb < parseFloat(origSizeKb))) {
+            modifiedPdfBytes = await this.compressPdfAggressively(activeFile, requestedKb);
+          } else {
+            // Basic structural compression
+            const arrayBuffer = await activeFile.arrayBuffer();
+            const pdfDoc = await PDFDocument.load(arrayBuffer);
+            pdfDoc.setTitle(''); pdfDoc.setAuthor(''); pdfDoc.setSubject(''); pdfDoc.setKeywords([]); pdfDoc.setProducer(''); pdfDoc.setCreator('');
+            modifiedPdfBytes = await pdfDoc.save({ useObjectStreams: true });
+          }
+
           const newSizeKb = (modifiedPdfBytes.length / 1024).toFixed(2);
-
-          textOutput = `### 📄 PDF Compression Successful\n\n- **Original Size:** ${origSizeKb} KB\n- **Compressed Size:** ${newSizeKb} KB`;
+          textOutput = `### 📄 PDF Compression Report\n\n- **Original Size:** ${origSizeKb} KB\n- **Compressed Size:** ${newSizeKb} KB`;
           
           if (requestedKb > 0) {
             textOutput += `\n- **Requested Target:** ${requestedKb} KB`;
-            if (parseFloat(newSizeKb) > requestedKb) {
-               textOutput += `\n\n*Note: Applied maximum lossless metadata & structure compression. Compressing further requires image downscaling which degrades quality.*`;
-            }
+            textOutput += `\n\n*Note: Heavy compression utilizes JPEG rasterization which shrinks file size drastically but flattens selectable text.*`;
           }
-        } else {
-          modifiedPdfBytes = await pdfDoc.save();
-          textOutput = `### 📄 PDF Processed Successfully\n\n✅ Your document is ready for download.`;
+        } 
+        else {
+          const arrayBuffer = await activeFile.arrayBuffer();
+          const pdfDoc = await PDFDocument.load(arrayBuffer);
+
+          if (config.actionButtonText.includes('Delete')) {
+            const pagesStr = inputValues.pagesToRemove || '1';
+            const indices = pagesStr.split(',').map((p: string) => parseInt(p.trim()) - 1).filter((i: number) => !isNaN(i) && i >= 0);
+            indices.sort((a: number, b: number) => b - a);
+            indices.forEach((index: number) => { if (index < pdfDoc.getPageCount()) pdfDoc.removePage(index); });
+            modifiedPdfBytes = await pdfDoc.save();
+            textOutput = `### 📄 PDF Pages Deleted\n\n- **Status:** Selected pages removed successfully.`;
+
+          } else if (config.actionButtonText.includes('Rotate')) {
+            const angleStr = inputValues.rotationAngle || '90';
+            let deg = 90;
+            if (angleStr.includes('180')) deg = 180;
+            else if (angleStr.includes('Counter') || angleStr.includes('-90')) deg = -90;
+            pdfDoc.getPages().forEach(page => page.setRotation(degrees(page.getRotation().angle + deg)));
+            modifiedPdfBytes = await pdfDoc.save();
+            textOutput = `### 📄 PDF Pages Rotated\n\n- **Status:** Pages rotated by ${deg} degrees.`;
+
+          } else if (config.actionButtonText.includes('Split')) {
+            const prompt = inputValues.prompt || '1';
+            const match = prompt.match(/(\d+)(?:\s*-\s*(\d+))?/);
+            let start = 0, end = 0;
+            if (match) {
+              start = Math.max(0, parseInt(match[1]) - 1);
+              end = match[2] ? Math.max(start, parseInt(match[2]) - 1) : start;
+            }
+            end = Math.min(end, pdfDoc.getPageCount() - 1);
+            const newPdf = await PDFDocument.create();
+            const indices = []; for(let i=start; i<=end; i++) indices.push(i);
+            const copied = await newPdf.copyPages(pdfDoc, indices);
+            copied.forEach(p => newPdf.addPage(p));
+            modifiedPdfBytes = await newPdf.save();
+            textOutput = `### 📄 PDF Split Successful\n\n- **Status:** Extracted pages ${start + 1} to ${end + 1} into a new document.`;
+
+          } else {
+            modifiedPdfBytes = await pdfDoc.save();
+            textOutput = `### 📄 PDF Processed Successfully\n\n- **Status:** Your document is ready for download.`;
+          }
         }
 
         const pdfBlob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
@@ -226,7 +291,7 @@ class APIService {
       const formattedParagraphs = pdfTextContent.split('\n').map(line => line.trim()).filter(line => line.length > 0).map(line => `<p>${this.sanitizeTextForWord(line)}</p>`).join('\n');
       const wordHtmlDoc = `<!DOCTYPE html>\n<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>\n<head>\n  <meta charset="utf-8">\n  <title>${this.sanitizeTextForWord(tool.name)}</title>\n  <style>\n    @page { size: A4; margin: 1in; }\n    body { font-family: 'Nirmala UI', 'Gautami', 'Arial', sans-serif; font-size: 11.5pt; line-height: 1.6; color: #111111; }\n    h1 { color: #2B579A; font-size: 18pt; margin-bottom: 6pt; border-bottom: 2px solid #2B579A; padding-bottom: 4pt; }\n    .meta { color: #555555; font-size: 9pt; margin-bottom: 14pt; font-weight: bold; }\n    p { margin: 0 0 8pt 0; text-align: justify; }\n  </style>\n</head>\n<body>\n  <h1>${this.sanitizeTextForWord(tool.name)} - Converted Document</h1>\n  <div class="meta">Source File: ${this.sanitizeTextForWord(fileName)}</div>\n  ${formattedParagraphs}\n</body>\n</html>`;
       const blob = new Blob(['\ufeff' + wordHtmlDoc], { type: 'application/msword;charset=utf-8' });
-      const textOutput = `### 📝 Converted to Microsoft Word (.${targetExt.toUpperCase()})\n\n✅ Real text extracted and converted into an editable Word document.`;
+      const textOutput = `### 📝 Converted to Microsoft Word (.${targetExt.toUpperCase()})\n\n- **Status:** Real text extracted and converted into an editable Word document.`;
       return { success: true, output: textOutput, textOutput, fileUrl: URL.createObjectURL(blob), executionTimeMs: Date.now() - startTime, provider: 'DocuCore Word Engine' };
     }
 
@@ -250,7 +315,7 @@ class APIService {
     }
 
     // Default Fallback
-    const defaultText = `### ✅ ${tool.name} Executed Successfully\n\nTask has been processed.`;
+    const defaultText = `### ✅ ${tool.name} Executed Successfully\n\n- **Status:** Task has been processed.`;
     const defaultBlob = new Blob(['\ufeff' + defaultText], { type: 'text/plain;charset=utf-8' });
     return { success: true, output: defaultText, textOutput: defaultText, fileUrl: URL.createObjectURL(defaultBlob), executionTimeMs: Date.now() - startTime };
   }
