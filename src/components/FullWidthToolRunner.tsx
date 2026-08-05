@@ -135,6 +135,15 @@ export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({ tool, 
     renderPdfPage();
   }, [uploadedFiles, currentPage, zoomScale, rotationAngle, outputResult]);
 
+  const handleInputChange = (id: string, value: any) => setInputValues((prev) => ({ ...prev, [id]: value }));
+
+  // 🚀 MISSING FUNCTION ADDED HERE TO FIX THE CRASH
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setUploadedFiles(Array.from(e.target.files));
+    }
+  };
+
   const handleExecute = async () => {
     if (config.showUpload && uploadedFiles.length === 0 && (cat.includes('pdf') || cat.includes('document'))) { alert("Please upload a file first!"); return; }
     setIsRunning(true); setOutputResult(null); setFileDownloadUrl(null); setMediaResultUrl(null); setProgressPercent(0);
