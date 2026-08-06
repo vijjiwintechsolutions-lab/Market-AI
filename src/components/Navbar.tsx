@@ -3,6 +3,8 @@
 // Handles global navigation, Firebase Auth state, and Wallet Balance.
 // =====================================================================
 
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Wallet, LogOut, Zap, Sparkles, UserCircle } from 'lucide-react';
@@ -19,7 +21,6 @@ export const Navbar: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        // Fetch wallet balance dynamically from MUTE Wallet Engine
         const balance = await UniversalWalletEngine.getBalance(currentUser.uid);
         setCredits(balance);
       }
@@ -45,11 +46,10 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-[#0A0A0A]/80 backdrop-blur-md border-b border-white/10 transition-all">
+    <nav className="sticky top-0 z-50 w-full bg-[#0A0A0A]/80 backdrop-blur-md border-b border-white/10 transition-all font-mono">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
-          {/* Logo Section */}
           <div className="flex-shrink-0 flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2 group">
               <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center transform group-hover:rotate-12 transition-transform shadow-lg shadow-emerald-900/40">
@@ -64,19 +64,16 @@ export const Navbar: React.FC = () => {
             </span>
           </div>
 
-          {/* Auth & Wallet Section */}
           <div className="flex items-center gap-4">
             {!isLoading && (
               <>
                 {user ? (
                   <div className="flex items-center gap-4">
-                    {/* Universal Wallet Balance */}
                     <div className="hidden sm:flex items-center gap-2 bg-[#151517] border border-white/10 px-3 py-1.5 rounded-full">
                       <Wallet className="w-4 h-4 text-emerald-400" />
                       <span className="text-xs font-bold text-white">{credits} <span className="text-slate-400 font-normal">Credits</span></span>
                     </div>
 
-                    {/* Profile & Logout */}
                     <div className="flex items-center gap-3 border-l border-white/10 pl-4">
                       {user.photoURL ? (
                         <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-white/20" />
