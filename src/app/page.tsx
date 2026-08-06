@@ -1,7 +1,3 @@
-// =====================================================================
-// MARKET1 OS ROOT PAGE (NEXT.JS APP ROUTER)
-// =====================================================================
-
 'use client';
 
 import React, { useState } from 'react';
@@ -39,13 +35,12 @@ export default function Page() {
         onOpenLatency={() => setIsLatencyOpen(true)}
       />
 
-      <HeroSection onOpenPricing={() => setIsPricingOpen(true)} />
+      <HeroSection />
 
       <UniversalMarketplace onSelectTool={(tool) => setSelectedTool(tool)} />
 
       <Footer />
 
-      {/* Interactive Modals */}
       {selectedTool && (
         <LiveToolRunnerModal 
           tool={selectedTool} 
