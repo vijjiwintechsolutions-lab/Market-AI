@@ -35,7 +35,7 @@ export default function Page() {
         onOpenLatency={() => setIsLatencyOpen(true)}
       />
 
-      <HeroSection />
+      <HeroSection onOpenPricing={() => setIsPricingOpen(true)} />
 
       <UniversalMarketplace onSelectTool={(tool) => setSelectedTool(tool)} />
 
