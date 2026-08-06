@@ -1,11 +1,12 @@
 // =====================================================================
 // MARKET1 UNIVERSAL VALIDATION ENGINE (MUTE)
-// Automatically validates inputs, files, auth, and credits.
+// Automatically validates inputs, files, auth, credits, and SUBSCRIPTIONS.
 // =====================================================================
 
 import { MuteToolConfig } from '../types/mute';
 import { auth } from '../config/firebase';
 import { UniversalWalletEngine } from './walletEngine';
+import { UniversalSubscriptionEngine } from './subscriptionEngine';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -14,9 +15,23 @@ export interface ValidationResult {
 
 export const UniversalValidationEngine = {
   async validate(tool: MuteToolConfig, inputValues: Record<string, any>, files: File[]): Promise<ValidationResult> {
+    const currentUser = auth.currentUser;
     const requiresUpload = !tool.accepts.includes('prompt') || tool.accepts.length > 1;
 
-    // 1. VALIDATE REQUIRED INPUTS
+    // 🚀 1. SUBSCRIPTION & DAILY LIMITS CHECK
+    const userLimits = await UniversalSubscriptionEngine.getUserLimits(currentUser?.uid || null);
+    
+    if (currentUser) {
+      const withinDailyLimit = await UniversalSubscriptionEngine.checkDailyLimit(currentUser.uid);
+      if (!withinDailyLimit && !tool.validation?.requireWalletCredits) {
+        return { isValid: false, errorMessage: `Daily Free Limit Reached (5/5). Please upgrade to PRO for unlimited access.` };
+      }
+    } else if (!tool.validation?.requireAuthentication && tool.engine !== 'browser') {
+        // Force login for server/AI tools after 1 try or strictly require login
+        return { isValid: false, errorMessage: `Please Sign In to execute high-performance cloud tools.` };
+    }
+
+    // 🚀 2. VALIDATE REQUIRED INPUTS
     for (const opt of tool.options) {
       if (opt.required) {
         const val = inputValues[opt.id];
@@ -26,14 +41,15 @@ export const UniversalValidationEngine = {
       }
     }
 
-    // 2. VALIDATE FILE UPLOADS
+    // 🚀 3. VALIDATE FILE UPLOADS (Using Subscription Limits)
     if (requiresUpload) {
       if (files.length === 0) return { isValid: false, errorMessage: `Please upload at least one valid file (${tool.accepts.join(', ').toUpperCase()}).` };
 
       const maxFiles = tool.validation?.maxFiles || 1;
       if (files.length > maxFiles) return { isValid: false, errorMessage: `Maximum ${maxFiles} file(s) allowed. You uploaded ${files.length}.` };
 
-      const maxMB = tool.validation?.maxFileSizeMB || 10;
+      // Use the smaller of either the Tool's max limit OR the User's Subscription limit
+      const maxMB = Math.min(tool.validation?.maxFileSizeMB || 10, userLimits.maxFileSizeMB);
       const maxBytes = maxMB * 1024 * 1024;
 
       for (const file of files) {
@@ -42,13 +58,11 @@ export const UniversalValidationEngine = {
         const isValidExt = new RegExp(`^(${acceptsRegex})$`, 'i').test(fileExt);
 
         if (!isValidExt) return { isValid: false, errorMessage: `Invalid file type: ${file.name}. Accepted formats: ${tool.accepts.join(', ').toUpperCase()}.` };
-        if (file.size > maxBytes) return { isValid: false, errorMessage: `File "${file.name}" is too large. Maximum size is ${maxMB}MB.` };
+        if (file.size > maxBytes) return { isValid: false, errorMessage: `File "${file.name}" exceeds your tier limit of ${maxMB}MB. Please Upgrade to PRO.` };
       }
     }
 
-    // 3. VALIDATE AUTHENTICATION & WALLET CREDITS
-    const currentUser = auth.currentUser;
-
+    // 🚀 4. VALIDATE AUTHENTICATION & WALLET CREDITS
     if (tool.validation?.requireAuthentication && !currentUser) {
       return { isValid: false, errorMessage: 'Authentication Required: You must be logged in to use this enterprise tool.' };
     }
