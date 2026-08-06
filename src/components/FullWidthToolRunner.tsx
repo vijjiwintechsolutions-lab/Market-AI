@@ -1,164 +1,234 @@
+// =====================================================================
+// MARKET1 FULL WIDTH TOOL RUNNER (MUTE)
+// Executes tools seamlessly with MuteToolConfig types.
+// =====================================================================
+
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Play, Sparkles, Download, RefreshCw, Sliders, UploadCloud, X, Paperclip, FileText, ChevronLeft, ChevronRight, Calculator, Copy, Layers, ZoomIn, ZoomOut, RotateCw, Image as ImageIcon, Music, Video, Code } from 'lucide-react';
-import { AITool, ExecutionHistoryItem } from '../types';
+import { 
+  ArrowLeft, Play, Download, RefreshCw, Sliders, 
+  UploadCloud, X, Paperclip, AlertCircle
+} from 'lucide-react';
+
+import { MuteToolConfig } from '../types/mute';
 import { apiService } from '../services/apiService';
+import { UniversalValidationEngine } from '../services/validationEngine';
+import { UniversalDownloadEngine } from '../services/downloadEngine';
+import { UniversalHistoryEngine } from '../services/historyEngine';
+import { UniversalAnalyticsEngine } from '../services/analyticsEngine';
+import { UniversalWalletEngine } from '../services/walletEngine';
+import { UniversalSubscriptionEngine } from '../services/subscriptionEngine';
+import { UniversalPreview } from './UniversalPreview';
+import { auth } from '../config/firebase';
 
-interface FullWidthToolRunnerProps { tool: AITool; allTools: AITool[]; onBack: () => void; onSelectTool: (tool: AITool) => void; onSaveHistory: (item: ExecutionHistoryItem) => void; }
-
-export function resolveToolConfig(tool: AITool) {
-  const id = (tool.id || '').toLowerCase();
-  const cat = (tool.category || '').toLowerCase();
-  let showConvertDropdown = false, formatOptions: string[] = [], defaultExt = 'txt', uploadLabel = 'Upload Source File', showUpload = true, allowMultiple = false, actionButtonText = tool.name;
-
-  if (id.includes('merge')) { formatOptions = ['PDF Document (.pdf)']; defaultExt = 'pdf'; uploadLabel = 'Upload PDFs to Merge'; allowMultiple = true; actionButtonText = 'Merge PDFs'; }
-  else if (id.includes('split')) { formatOptions = ['PDF Document (.pdf)']; defaultExt = 'pdf'; uploadLabel = 'Upload PDF to Split'; actionButtonText = 'Split PDF'; }
-  else if (id.includes('compress')) { formatOptions = ['PDF Document (.pdf)']; defaultExt = 'pdf'; uploadLabel = 'Upload PDF to Compress'; actionButtonText = 'Compress PDF'; }
-  else if (id.includes('rotate')) { formatOptions = ['PDF Document (.pdf)']; defaultExt = 'pdf'; uploadLabel = 'Upload PDF to Rotate'; actionButtonText = 'Rotate PDF'; }
-  else if (id.includes('delete')) { formatOptions = ['PDF Document (.pdf)']; defaultExt = 'pdf'; uploadLabel = 'Upload PDF Document'; actionButtonText = 'Delete Pages'; }
-  else if (id.includes('watermark')) { formatOptions = ['PDF Document (.pdf)']; defaultExt = 'pdf'; uploadLabel = 'Upload PDF Document'; actionButtonText = 'Add Watermark'; }
-  else if (id.includes('word') || id.includes('docx')) { showConvertDropdown = true; formatOptions = ['Word Document (.doc)', 'Word Document (.docx)']; defaultExt = 'doc'; uploadLabel = 'Upload PDF Document'; actionButtonText = 'Convert to Word'; }
-  else if (id.includes('excel')) { showConvertDropdown = true; formatOptions = ['Excel Spreadsheet (.xlsx)', 'CSV File (.csv)']; defaultExt = 'xlsx'; uploadLabel = 'Upload PDF Document'; actionButtonText = 'Convert to Excel'; }
-  else if (id.includes('jpg') || id.includes('png')) { showConvertDropdown = true; formatOptions = ['JPG Image (*.jpg)', 'PNG Image (*.png)']; defaultExt = 'jpg'; uploadLabel = 'Upload PDF Document'; actionButtonText = 'Convert to Image'; }
-  else if (cat.includes('pdf')) { formatOptions = ['PDF Document (.pdf)']; defaultExt = 'pdf'; uploadLabel = 'Upload PDF Document'; actionButtonText = 'Process PDF'; }
-  else if (cat.includes('calc')) { showUpload = false; formatOptions = ['Text Report (.txt)']; defaultExt = 'txt'; actionButtonText = 'Calculate Now'; }
-  else { showUpload = false; formatOptions = ['Plain Text (.txt)']; defaultExt = 'txt'; actionButtonText = 'Execute Tool'; }
-
-  return { showConvertDropdown, formatOptions, defaultExt, uploadLabel, showUpload, allowMultiple, actionButtonText };
+interface FullWidthToolRunnerProps {
+  tool: MuteToolConfig;
+  onBack: () => void;
 }
 
-function parseInlineBold(str: string) {
-  return str.split(/(\*\*.*?\*\*)/g).map((part, i) => part.startsWith('**') ? <strong key={i} className="font-extrabold text-white">{part.slice(2, -2)}</strong> : part);
-}
+export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({ tool, onBack }) => {
+  const [inputValues, setInputValues] = useState<Record<string, any>>(() => {
+    const defaults: Record<string, any> = {};
+    tool.options.forEach(opt => { defaults[opt.id] = opt.defaultValue; });
+    if (tool.outputs.length > 0) defaults['outputFormat'] = tool.outputs[0];
+    return defaults;
+  });
 
-function renderCleanFormattedText(text: string) {
-  if (!text) return null;
-  return <div className="space-y-2 font-sans text-xs text-slate-200">{text.split('\n').map((line, idx) => {
-    const trimmed = line.trim();
-    if (trimmed === '---') return <hr key={idx} className="border-white/10 my-3" />;
-    if (trimmed.startsWith('#')) return <div key={idx} className="text-sm font-extrabold text-emerald-400 mt-3 mb-2 flex items-center gap-2 border-b border-white/5 pb-1">{parseInlineBold(trimmed.replace(/^#+\s*/, ''))}</div>;
-    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) return <div key={idx} className="flex items-start gap-2 pl-2 py-0.5"><span className="text-emerald-400 font-bold">•</span><div>{parseInlineBold(trimmed.replace(/^[-*]\s*/, ''))}</div></div>;
-    if (!trimmed) return <div key={idx} className="h-1" />;
-    return <div key={idx} className="text-slate-300 py-0.5">{parseInlineBold(line)}</div>;
-  })}</div>;
-}
-
-export const FullWidthToolRunner: React.FC<FullWidthToolRunnerProps> = ({ tool, onBack, onSaveHistory }) => {
-  const config = resolveToolConfig(tool);
-  const [inputValues, setInputValues] = useState<Record<string, any>>({});
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [outputResult, setOutputResult] = useState<string | null>(null);
-  const [fileDownloadUrl, setFileDownloadUrl] = useState<string | null>(null);
-  const [mediaResultUrl, setMediaResultUrl] = useState<string | null>(null);
-  const [executionTime, setExecutionTime] = useState<number | null>(null);
   const [progressPercent, setProgressPercent] = useState<number>(0);
-  const [copied, setCopied] = useState(false);
+  const [executionTime, setExecutionTime] = useState<number | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  
+  const [textOutput, setTextOutput] = useState<string | null>(null);
+  const [mediaOutputUrl, setMediaOutputUrl] = useState<string | null>(null);
+  const [fileDownloadUrl, setFileDownloadUrl] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const requiresUpload = !tool.accepts.includes('prompt') || tool.accepts.length > 1;
 
   useEffect(() => {
-    const initial: Record<string, any> = {};
-    tool.inputs.forEach((p) => { initial[p.id] = p.defaultValue || ''; });
-    if (config.formatOptions.length > 0) initial['outputFormat'] = config.formatOptions[0];
-    setInputValues(initial); setOutputResult(null); setFileDownloadUrl(null); setMediaResultUrl(null); setUploadedFiles([]);
+    setUploadedFiles([]);
+    setTextOutput(null);
+    setMediaOutputUrl(null);
+    setFileDownloadUrl(null);
+    setValidationError(null);
+    setExecutionTime(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [tool.id]);
 
-  const selectedFormat = inputValues['outputFormat'] || '';
-  let activeExt = config.defaultExt;
-  if (selectedFormat.includes('.png')) activeExt = 'png'; else if (selectedFormat.includes('.jpg')) activeExt = 'jpg';
-  else if (selectedFormat.includes('.docx')) activeExt = 'docx'; else if (selectedFormat.includes('.doc')) activeExt = 'doc';
+  const handleInputChange = (id: string, value: any) => setInputValues(prev => ({ ...prev, [id]: value }));
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setUploadedFiles(Array.from(e.target.files));
+      setValidationError(null);
+    }
+  };
 
   const handleExecute = async () => {
-    if (config.showUpload && uploadedFiles.length === 0 && config.defaultExt === 'pdf') { alert("Please upload a file first!"); return; }
-    setIsRunning(true); setOutputResult(null); setFileDownloadUrl(null); setMediaResultUrl(null); setProgressPercent(0);
+    setValidationError(null);
+    
+    const validation = await UniversalValidationEngine.validate(tool, inputValues, uploadedFiles);
+    if (!validation.isValid) {
+      setValidationError(validation.errorMessage || 'Validation failed.');
+      return;
+    }
+
+    setIsRunning(true);
+    setTextOutput(null);
+    setMediaOutputUrl(null);
+    setFileDownloadUrl(null);
+    setProgressPercent(0);
+
+    const progressInt = setInterval(() => setProgressPercent(p => (p < 94 ? p + Math.floor(Math.random() * 8) + 2 : p)), 100);
     const start = Date.now();
-    const progressInt = setInterval(() => setProgressPercent(p => (p < 94 ? p + Math.floor(Math.random() * 12) + 5 : p)), 100);
 
     try {
       const res = await apiService.executeTool({ tool, inputValues, file: uploadedFiles[0], files: uploadedFiles });
-      clearInterval(progressInt); setProgressPercent(100);
+      
+      clearInterval(progressInt);
+      setProgressPercent(100);
+      const execTime = Date.now() - start;
+      
       setTimeout(() => {
         if (res.success) {
+          if (res.textOutput) setTextOutput(res.textOutput);
+          if (res.mediaUrl) setMediaOutputUrl(res.mediaUrl);
           if (res.fileUrl) setFileDownloadUrl(res.fileUrl);
-          if (res.imageUrl) setMediaResultUrl(res.imageUrl);
-          setOutputResult(res.textOutput || String(res.output));
+
+          if (auth.currentUser) {
+            if (tool.validation?.requireWalletCredits) {
+              UniversalWalletEngine.deductCredits(auth.currentUser.uid, tool.validation.requireWalletCredits);
+            }
+            UniversalSubscriptionEngine.incrementDailyUsage(auth.currentUser.uid);
+          }
+          
+          UniversalHistoryEngine.logExecution(tool, 'success', execTime, inputValues);
+          UniversalAnalyticsEngine.trackUsage(tool, execTime, true);
+        } else {
+          setValidationError(res.error || 'Execution failed.');
+          UniversalHistoryEngine.logExecution(tool, 'error', execTime, inputValues);
+          UniversalAnalyticsEngine.trackUsage(tool, execTime, false);
         }
-        setExecutionTime(Date.now() - start); setIsRunning(false);
-      }, 300);
-    } catch (err) { clearInterval(progressInt); setIsRunning(false); }
+        
+        setExecutionTime(res.executionTimeMs || execTime);
+        setIsRunning(false);
+      }, 400);
+
+    } catch (err: any) {
+      clearInterval(progressInt);
+      setIsRunning(false);
+      setValidationError(err.message || 'An unexpected runtime error occurred.');
+      
+      const execTime = Date.now() - start;
+      UniversalHistoryEngine.logExecution(tool, 'error', execTime, inputValues);
+      UniversalAnalyticsEngine.trackUsage(tool, execTime, false);
+    }
   };
 
-  const handleDownload = async () => {
-    const targetUrl = fileDownloadUrl || mediaResultUrl; if (!targetUrl) return;
-    let baseName = uploadedFiles.length > 0 ? (config.actionButtonText.includes('Merge') ? 'merged-document' : uploadedFiles[0].name.split('.')[0]) : tool.id;
-    const link = document.createElement('a'); link.href = targetUrl; link.download = `${baseName}-output.${activeExt}`;
-    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  const handleDownload = () => {
+    const targetUrl = fileDownloadUrl || mediaOutputUrl;
+    if (!targetUrl) return;
+    
+    const activeExt = inputValues['outputFormat'] || tool.outputs[0] || 'out';
+    let baseName = tool.id;
+    if (uploadedFiles.length > 0) {
+      baseName = uploadedFiles[0].name.substring(0, uploadedFiles[0].name.lastIndexOf('.')) || tool.id;
+    }
+    
+    UniversalDownloadEngine.download(targetUrl, baseName, activeExt);
+    UniversalAnalyticsEngine.trackDownload(tool.id, activeExt);
   };
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#E0E0E0] pb-12 font-mono">
-      <div className="bg-[#151517] border-b border-white/10 px-4 py-2 flex items-center justify-between"><button onClick={onBack} className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded"><ArrowLeft className="w-3.5 h-3.5"/> Back</button></div>
+      <div className="bg-[#151517] border-b border-white/10 px-4 py-2 flex items-center justify-between">
+        <button onClick={onBack} className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded transition-colors"><ArrowLeft className="w-3.5 h-3.5"/> Back</button>
+      </div>
+
       <div className="w-full px-4 sm:px-6 lg:px-8 pt-4 space-y-4">
-        <div className="bg-[#151517] border border-white/10 rounded-lg px-4 py-2.5 flex items-center justify-between"><div className="flex items-center gap-3"><span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-emerald-600/30 text-emerald-300">PRO ENGINE</span><h1 className="text-base font-extrabold text-white">{tool.name}</h1></div>{executionTime && <span className="text-emerald-400 text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded font-bold">{executionTime}ms</span>}</div>
+        <div className="bg-[#151517] border border-white/10 rounded-lg px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border ${tool.engine === 'ai' ? 'bg-purple-600/30 text-purple-300 border-purple-500/40' : 'bg-emerald-600/30 text-emerald-300 border-emerald-500/40'}`}>{tool.engine.toUpperCase()} ENGINE</span>
+            <h1 className="text-base font-extrabold text-white">{tool.name}</h1>
+          </div>
+          {executionTime && <span className="text-emerald-400 text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded font-bold">{executionTime}ms</span>}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          <div className="lg:col-span-4 bg-[#151517] border border-white/10 rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-white/10"><span className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5"><Sliders className="w-3.5 h-3.5"/> Parameters</span></div>
-            {config.showConvertDropdown && (
-              <div className="space-y-1"><label className="text-xs font-bold text-slate-200">Convert to:</label>
-                <select value={inputValues['outputFormat']} onChange={e => setInputValues(p => ({...p, outputFormat: e.target.value}))} className="w-full px-2.5 py-2 bg-[#0A0A0A] border border-white/20 rounded text-xs text-white focus:border-emerald-500">{config.formatOptions.map(fmt => <option key={fmt} value={fmt}>{fmt}</option>)}</select>
-              </div>
-            )}
-            {tool.inputs.map(p => (
-              <div key={p.id} className="space-y-1"><label className="text-xs font-bold text-slate-200">{p.name}</label>
-                {p.type === 'textarea' || p.type === 'text' ? <input type="text" value={inputValues[p.id] || ''} onChange={e => setInputValues(pr => ({...pr, [p.id]: e.target.value}))} className="w-full px-2.5 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-emerald-500" />
-                : <select value={inputValues[p.id] || p.options?.[0]} onChange={e => setInputValues(pr => ({...pr, [p.id]: e.target.value}))} className="w-full px-2.5 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white">{p.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select>}
-              </div>
-            ))}
-            {config.showUpload && (
-              <div className="pt-2 border-t border-white/10 space-y-1.5"><span className="text-[11px] font-bold text-slate-300 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5 text-emerald-400"/> {config.uploadLabel}</span>
+          <div className="lg:col-span-4 bg-[#151517] border border-white/10 rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10"><span className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5"><Sliders className="w-3.5 h-3.5"/> Configuration</span></div>
+            
+            <div className="space-y-4">
+              {tool.outputs.length > 1 && (
+                <div className="space-y-1"><label className="text-xs font-bold text-slate-200">Output Format:</label>
+                  <select value={inputValues['outputFormat']} onChange={e => handleInputChange('outputFormat', e.target.value)} className="w-full px-2.5 py-2 bg-[#0A0A0A] border border-white/20 rounded text-xs text-white focus:border-emerald-500 font-bold uppercase">
+                    {tool.outputs.map(fmt => <option key={fmt} value={fmt}>{fmt}</option>)}
+                  </select>
+                </div>
+              )}
+              {tool.options.map(opt => (
+                <div key={opt.id} className="space-y-1">
+                  <label className="text-xs font-bold text-slate-200 flex justify-between">{opt.label} {opt.type === 'slider' && <span className="text-emerald-400">{inputValues[opt.id]}</span>}</label>
+                  {opt.type === 'text' && <input type="text" value={inputValues[opt.id]} onChange={e => handleInputChange(opt.id, e.target.value)} className="w-full px-2.5 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-emerald-500" />}
+                  {opt.type === 'textarea' && <textarea rows={4} value={inputValues[opt.id]} onChange={e => handleInputChange(opt.id, e.target.value)} className="w-full px-2.5 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-emerald-500 resize-none" placeholder={`Enter ${opt.label.toLowerCase()}...`} />}
+                  {opt.type === 'select' && opt.options && <select value={inputValues[opt.id]} onChange={e => handleInputChange(opt.id, e.target.value)} className="w-full px-2.5 py-2 bg-[#0A0A0A] border border-white/10 rounded text-xs text-white focus:border-emerald-500">{opt.options.map(o => <option key={o} value={o}>{o}</option>)}</select>}
+                  {opt.type === 'slider' && <input type="range" min={opt.min} max={opt.max} step={opt.step} value={inputValues[opt.id]} onChange={e => handleInputChange(opt.id, Number(e.target.value))} className="w-full accent-emerald-500" />}
+                </div>
+              ))}
+            </div>
+
+            {requiresUpload && (
+              <div className="pt-3 border-t border-white/10 space-y-2">
+                <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1"><Paperclip className="w-3.5 h-3.5 text-emerald-400"/> Source Files ({tool.accepts.join(', ').toUpperCase()})</span>
                 {uploadedFiles.length === 0 ? (
-                  <div onClick={() => fileInputRef.current?.click()} className="border border-dashed border-emerald-500/40 hover:border-emerald-500 bg-[#0A0A0A] rounded-lg p-3 text-center cursor-pointer">
-                    <UploadCloud className="w-5 h-5 text-emerald-500 mx-auto mb-1"/><p className="text-xs text-slate-200 font-bold">Select File or Drag</p>
-                    <input type="file" ref={fileInputRef} multiple={config.allowMultiple} onChange={e => e.target.files && setUploadedFiles(Array.from(e.target.files))} className="hidden" />
+                  <div onClick={() => fileInputRef.current?.click()} className="border border-dashed border-emerald-500/40 hover:border-emerald-500 bg-[#0A0A0A] rounded-lg p-4 text-center cursor-pointer transition-colors group">
+                    <UploadCloud className="w-5 h-5 text-emerald-500 mx-auto mb-1 group-hover:scale-110 transition-transform"/>
+                    <p className="text-xs text-slate-200 font-bold mt-2">Select Files or Drag & Drop</p>
+                    <input type="file" ref={fileInputRef} multiple={tool.capabilities.allowMultipleUploads} accept={tool.accepts.map(ext => `.${ext}`).join(',')} onChange={handleFileChange} className="hidden" />
                   </div>
                 ) : (
-                  <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">{uploadedFiles.map((f, i) => <div key={i} className="p-2 bg-[#0A0A0A] border border-emerald-500/50 rounded flex items-center justify-between text-xs"><span className="truncate text-white font-bold">{f.name}</span><button onClick={() => setUploadedFiles(prev => prev.filter((_, idx) => idx !== i))} className="text-rose-400 p-1"><X className="w-3.5 h-3.5"/></button></div>)}</div>
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                    {uploadedFiles.map((f, i) => (
+                      <div key={i} className="p-2 bg-[#0A0A0A] border border-emerald-500/50 rounded flex items-center justify-between text-xs">
+                        <span className="truncate text-white font-bold">{f.name}</span>
+                        <button onClick={() => setUploadedFiles(prev => prev.filter((_, idx) => idx !== i))} className="text-rose-400 hover:bg-rose-500/20 p-1 rounded transition-colors"><X className="w-3.5 h-3.5"/></button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
-            <button onClick={handleExecute} disabled={isRunning} className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 mt-2">
-              {isRunning ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Play className="w-4 h-4 fill-slate-950"/>}<span>{isRunning ? 'Processing...' : config.actionButtonText}</span>
+
+            {validationError && (
+              <div className="bg-rose-500/10 border border-rose-500/40 rounded p-3 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-rose-300 font-medium">{validationError}</p>
+              </div>
+            )}
+
+            <button onClick={handleExecute} disabled={isRunning} className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-lg flex items-center justify-center gap-2 mt-4 transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-50">
+              {isRunning ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Play className="w-4 h-4 fill-slate-950"/>}
+              <span>{isRunning ? 'Processing...' : `Run ${tool.name}`}</span>
             </button>
           </div>
-          <div className="lg:col-span-8 bg-[#151517] border border-white/10 rounded-lg p-4 min-h-[560px] flex flex-col justify-between shadow-2xl">
-            <div>
-              <div className="flex flex-wrap items-center justify-between pb-2 border-b border-white/10 mb-3 gap-2 bg-[#0A0A0A] p-2 rounded-lg border border-white/5"><span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5"/> Workspace</span></div>
-              {!isRunning && !outputResult && uploadedFiles.length === 0 && !mediaResultUrl && (
-                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl flex flex-col items-center justify-center p-12 text-center min-h-[400px]">
-                  {tool.category?.includes('calc') ? <Calculator className="w-12 h-12 text-emerald-500 mx-auto mb-2 animate-bounce"/> : <FileText className="w-12 h-12 text-emerald-500 mx-auto mb-2 animate-bounce"/>}
-                  <h3 className="text-white font-bold text-sm">Ready for Processing</h3><p className="text-slate-400 text-xs mt-1">Configure inputs and click "{config.actionButtonText}".</p>
-                </div>
-              )}
-              {isRunning && (
-                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-8 flex flex-col items-center justify-center min-h-[400px] space-y-4">
-                  <div className="relative w-16 h-16 flex items-center justify-center"><div className="absolute inset-0 border-4 border-emerald-500/20 rounded-full"></div><div className="absolute inset-0 border-4 border-emerald-600 rounded-full animate-spin border-t-transparent"></div><span className="text-white font-extrabold text-xs">{progressPercent}%</span></div>
-                  <div className="w-full max-w-xs space-y-1"><div className="flex justify-between text-xs font-bold text-slate-300"><span>Processing...</span><span>{progressPercent}%</span></div><div className="w-full h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-emerald-600 transition-all duration-150" style={{ width: `${progressPercent}%` }}></div></div></div>
-                </div>
-              )}
-              {mediaResultUrl && !isRunning && (
-                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center min-h-[400px] max-h-[460px]"><img src={mediaResultUrl} alt="Output" className="max-h-[380px] w-auto object-contain rounded-lg" /></div>
-              )}
-              {outputResult && !mediaResultUrl && !isRunning && (
-                <div className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-5 min-h-[400px] max-h-[440px] overflow-y-auto relative">
-                  <button onClick={() => { navigator.clipboard.writeText(outputResult.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/^[-*]\s*/gm, '• ').replace(/^---$/gm, '')); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="absolute top-3 right-3 px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-[10px] font-bold text-slate-300 flex items-center gap-1"><Copy className="w-3 h-3"/> {copied ? 'Copied!' : 'Copy'}</button>
-                  {renderCleanFormattedText(outputResult)}
-                </div>
-              )}
-            </div>
-            {!isRunning && (fileDownloadUrl || mediaResultUrl) && (
-              <div className="mt-3 pt-3 border-t border-white/10">
-                <button onClick={handleDownload} className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-2"><Download className="w-4 h-4"/><span>Download Output (.${activeExt.toUpperCase()})</span></button>
+
+          <div className="lg:col-span-8 bg-[#151517] border border-white/10 rounded-lg p-4 shadow-2xl flex flex-col justify-between">
+            <UniversalPreview 
+              tool={tool} 
+              isRunning={isRunning} 
+              progressPercent={progressPercent} 
+              textOutput={textOutput} 
+              mediaOutputUrl={mediaOutputUrl} 
+            />
+
+            {!isRunning && tool.capabilities.hasDownload && (textOutput || mediaOutputUrl) && (
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <button onClick={handleDownload} className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-extrabold text-xs uppercase rounded-xl flex items-center justify-center gap-2 transition-all">
+                  <Download className="w-4 h-4"/><span>Download Output</span>
+                </button>
               </div>
             )}
           </div>
