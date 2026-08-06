@@ -3,11 +3,17 @@
 // =====================================================================
 
 export type ToolCategory = 
+  | 'PDF & Document Tools'
+  | 'Image Tools (AI & Utility)'
+  | 'Video Tools (AI & Utility)'
+  | 'Audio Tools (AI & Utility)'
+  | 'Calculators & Finance'
+  | 'Coding & Web Tools'
+  | 'Text & Marketing Tools'
   | 'PDF & Documents'
   | 'Image & Graphics'
   | 'AI & Text'
   | 'Video & Audio'
-  | 'Calculators & Finance'
   | 'Coding & Web';
 
 export type EngineType = 'browser' | 'backend' | 'ai' | 'hybrid';
