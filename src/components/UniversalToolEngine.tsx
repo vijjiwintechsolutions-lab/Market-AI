@@ -74,7 +74,7 @@ export const UniversalToolEngine: React.FC<UniversalToolEngineProps> = ({ tool, 
   const handleExecute = async () => {
     setValidationError(null);
     
-    // 🛡️ 1. MUTE UNIVERSAL VALIDATION ENGINE (Now checks auth & wallet async)
+    // 🛡️ 1. MUTE UNIVERSAL VALIDATION ENGINE
     const validation = await UniversalValidationEngine.validate(tool, inputValues, uploadedFiles);
     if (!validation.isValid) {
       setValidationError(validation.errorMessage || 'Validation failed.');
