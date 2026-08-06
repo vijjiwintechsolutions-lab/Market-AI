@@ -2,11 +2,9 @@
 const nextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: '100mb', // Allows large video/PDF uploads
+      bodySizeLimit: '100mb',
     },
   },
-  // Vercel specific settings for longer execution times
-  maxDuration: 60, 
 };
 
 module.exports = nextConfig;
