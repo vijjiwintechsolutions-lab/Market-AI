@@ -1,79 +1,61 @@
 // =====================================================================
-// MARKET1 UNIVERSAL TOOL ENGINE (MUTE) - CORE SCHEMA
-// Configure Once. Generate Everything.
+// MARKET1 MUTE TYPE DEFINITIONS
 // =====================================================================
+
+export type ToolCategory = 
+  | 'PDF & Documents'
+  | 'Image & Graphics'
+  | 'AI & Text'
+  | 'Video & Audio'
+  | 'Calculators & Finance'
+  | 'Coding & Web';
 
 export type EngineType = 'browser' | 'backend' | 'ai' | 'hybrid';
 
-export type ToolCategory = 
-  | 'PDF & Documents' 
-  | 'Image & Graphics' 
-  | 'Video & Animation' 
-  | 'Audio & Music' 
-  | 'Calculators & Finance' 
-  | 'Coding & Web' 
-  | 'Text & Marketing';
-
-export type InputFormat = 'pdf' | 'jpg' | 'png' | 'webp' | 'mp4' | 'mp3' | 'txt' | 'csv' | 'json' | 'prompt' | 'none';
-export type OutputFormat = InputFormat | 'docx' | 'xlsx' | 'svg' | 'webm';
-
-// Defines the dynamic UI controls a tool requires
 export interface ToolOption {
   id: string;
   label: string;
-  type: 'text' | 'number' | 'select' | 'slider' | 'switch' | 'textarea';
-  defaultValue: string | number | boolean;
-  options?: string[]; // For 'select' type
-  min?: number;       // For 'slider' or 'number'
+  type: 'text' | 'textarea' | 'select' | 'slider';
+  defaultValue?: any;
+  options?: string[];
+  min?: number;
   max?: number;
   step?: number;
   required?: boolean;
 }
 
-export interface ValidationRules {
+export interface ToolValidation {
   maxFileSizeMB?: number;
   maxFiles?: number;
   requireAuthentication?: boolean;
   requireWalletCredits?: number;
 }
 
-export interface AIConfiguration {
-  primaryProvider: 'openrouter' | 'fal.ai' | 'huggingface' | 'replicate' | 'none';
-  fallbackProvider?: 'openrouter' | 'fal.ai' | 'huggingface' | 'replicate' | 'none';
+export interface ToolCapabilities {
+  hasPreview: boolean;
+  hasDownload: boolean;
+  hasHistory: boolean;
+  allowMultipleUploads: boolean;
+}
+
+export interface AIConfig {
+  primaryProvider: string;
+  fallbackProvider?: string;
   modelId: string;
-  fallbackModelId?: string;
 }
 
 export interface MuteToolConfig {
-  // 1. Tool Metadata
   id: string;
   name: string;
   category: ToolCategory;
   description: string;
   seoKeywords: string[];
-  
-  // 2. Engine & Processor
   engine: EngineType;
-  processor: string; // e.g., 'pdf-lib', 'ffmpeg.wasm', 'sharp', 'flux-schnell'
-  
-  // 3. I/O Configurations
-  accepts: InputFormat[];
-  outputs: OutputFormat[];
-  
-  // 4. Dynamic UI Options
+  processor: string;
+  accepts: string[];
+  outputs: string[];
   options: ToolOption[];
-  
-  // 5. Validation Rules
-  validation: ValidationRules;
-
-  // 6. Capabilities (Flags for Universal Engines)
-  capabilities: {
-    hasPreview: boolean;
-    hasDownload: boolean;
-    hasHistory: boolean;
-    allowMultipleUploads: boolean;
-  };
-
-  // 7. AI Specifics (Optional)
-  aiConfig?: AIConfiguration;
+  validation?: ToolValidation;
+  capabilities: ToolCapabilities;
+  aiConfig?: AIConfig;
 }
