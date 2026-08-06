@@ -47,23 +47,15 @@ class UniversalProcessingRouter {
           throw new Error(`Unsupported engine type: ${tool.engine}`);
       }
 
-      return {
-        success: true,
-        executionTimeMs: Date.now() - startTime,
-        ...result
-      } as MuteExecutionResponse;
+      return { success: true, executionTimeMs: Date.now() - startTime, ...result } as MuteExecutionResponse;
 
     } catch (error: any) {
       console.error(`[MUTE Router Error] ${tool.id}:`, error);
-      return {
-        success: false,
-        error: error.message || 'An unexpected error occurred during execution.',
-        executionTimeMs: Date.now() - startTime
-      };
+      return { success: false, error: error.message || 'An unexpected error occurred.', executionTimeMs: Date.now() - startTime };
     }
   }
 
-  // 🖥️ BROWSER ENGINE (Runs 100% Client-Side)
+  // 🖥️ BROWSER ENGINE (Client-Side)
   private async executeBrowserEngine({ tool, inputValues, files }: MuteExecutionParams): Promise<Partial<MuteExecutionResponse>> {
     const activeFile = files && files.length > 0 ? files[0] : null;
 
@@ -110,28 +102,41 @@ class UniversalProcessingRouter {
     throw new Error(`Unsupported browser processor: ${tool.processor}`);
   }
 
-  // ☁️ BACKEND ENGINE (Heavy Tasks)
-  private async executeBackendEngine({ tool }: MuteExecutionParams): Promise<Partial<MuteExecutionResponse>> {
-    return {
-      textOutput: `### ⚙️ Backend Process Executed\n\n- **Processor:** ${tool.processor}\n- **Status:** File successfully passed to backend API.`
-    };
+  // ☁️ BACKEND ENGINE (Routes to our new Next.js API)
+  private async executeBackendEngine({ tool, inputValues, files }: MuteExecutionParams): Promise<Partial<MuteExecutionResponse>> {
+    const formData = new FormData();
+    formData.append('toolId', tool.id);
+    formData.append('processor', tool.processor);
+    
+    if (files && files.length > 0) {
+      files.forEach(f => formData.append('files', f));
+    }
+    
+    // Add all UI options to the request
+    Object.entries(inputValues).forEach(([k, v]) => formData.append(`opts_${k}`, String(v)));
+
+    const response = await fetch('/api/tools/execute', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || 'Backend Gateway execution failed.');
+    }
+
+    return await response.json();
   }
 
-  // 🤖 AI ENGINE (Calls our Secure Next.js API Route)
+  // 🤖 AI ENGINE (Secure Server API Route)
   private async executeAIEngine({ tool, inputValues }: MuteExecutionParams): Promise<Partial<MuteExecutionResponse>> {
     const provider = tool.aiConfig?.primaryProvider || 'openrouter';
     const model = tool.aiConfig?.modelId || 'auto';
     
-    // 🚀 Make a real fetch to our secure Next.js API Route
     const response = await fetch('/api/ai/execute', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        toolId: tool.id,
-        provider,
-        model,
-        inputs: inputValues
-      })
+      body: JSON.stringify({ toolId: tool.id, provider, model, inputs: inputValues })
     });
 
     if (!response.ok) {
