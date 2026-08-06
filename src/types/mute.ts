@@ -9,12 +9,7 @@ export type ToolCategory =
   | 'Audio Tools (AI & Utility)'
   | 'Calculators & Finance'
   | 'Coding & Web Tools'
-  | 'Text & Marketing Tools'
-  | 'PDF & Documents'
-  | 'Image & Graphics'
-  | 'AI & Text'
-  | 'Video & Audio'
-  | 'Coding & Web';
+  | 'Text & Marketing Tools';
 
 export type EngineType = 'browser' | 'backend' | 'ai' | 'hybrid';
 
