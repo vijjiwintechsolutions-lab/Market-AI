@@ -14,83 +14,112 @@ interface SubmitToolModalProps {
 }
 
 const CATEGORIES_LIST: ToolCategory[] = [
-  'PDF & Documents',
-  'Image & Graphics',
-  'AI & Text',
-  'Video & Audio',
+  'PDF & Document Tools',
+  'Image Tools (AI & Utility)',
+  'Video Tools (AI & Utility)',
+  'Audio Tools (AI & Utility)',
   'Calculators & Finance',
-  'Coding & Web'
+  'Coding & Web Tools',
+  'Text & Marketing Tools',
 ];
 
-export const SubmitToolModal: React.FC<SubmitToolModalProps> = ({ isOpen, onClose }) => {
+export const SubmitToolModal: React.FC<SubmitToolModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<ToolCategory>('PDF & Documents');
+  const [category, setCategory] =
+    useState<ToolCategory>('PDF & Document Tools');
 
   if (!isOpen) return null;
 
+  const handleSubmit = () => {
+    alert('Tool submitted for review successfully!');
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 font-mono">
-      <div className="bg-[#151517] border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-6 shadow-2xl">
+      <div className="w-full max-w-lg space-y-6 rounded-2xl border border-white/10 bg-[#151517] p-6 shadow-2xl">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
-            <PlusCircle className="w-5 h-5 text-emerald-400" /> Submit New Tool
+          <h2 className="flex items-center gap-2 text-lg font-extrabold text-white">
+            <PlusCircle className="h-5 w-5 text-emerald-400" />
+            Submit New Tool
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors">
-            <X className="w-5 h-5" />
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-slate-300 block mb-1">Tool Name</label>
-            <input 
-              type="text" 
-              value={name} 
-              onChange={e => setName(e.target.value)}
+            <label className="mb-1 block text-xs font-bold text-slate-300">
+              Tool Name
+            </label>
+
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Advanced PDF Splitter"
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 focus:border-emerald-500 focus:outline-none text-xs"
+              className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-slate-100 outline-none transition-colors focus:border-emerald-500"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-300 block mb-1">Category</label>
-            <select 
-              value={category} 
-              onChange={e => setCategory(e.target.value as ToolCategory)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 focus:border-emerald-500 focus:outline-none cursor-pointer text-xs uppercase font-bold"
+            <label className="mb-1 block text-xs font-bold text-slate-300">
+              Category
+            </label>
+
+            <select
+              value={category}
+              onChange={(e) =>
+                setCategory(e.target.value as ToolCategory)
+              }
+              className="w-full cursor-pointer rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs font-bold uppercase text-slate-100 outline-none transition-colors focus:border-emerald-500"
             >
-              {CATEGORIES_LIST.map((c) => (
-                <option key={c} value={c}>{c}</option>
+              {CATEGORIES_LIST.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-300 block mb-1">Description</label>
-            <textarea 
+            <label className="mb-1 block text-xs font-bold text-slate-300">
+              Description
+            </label>
+
+            <textarea
               rows={3}
-              value={description} 
-              onChange={e => setDescription(e.target.value)}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what your tool does..."
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 focus:border-emerald-500 focus:outline-none resize-none text-xs"
+              className="w-full resize-none rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-slate-100 outline-none transition-colors focus:border-emerald-500"
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
-          <button 
+        <div className="flex justify-end gap-3 border-t border-white/10 pt-4">
+          <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-bold transition-colors"
+            className="rounded-xl bg-white/5 px-4 py-2 text-xs font-bold text-slate-300 transition-colors hover:bg-white/10"
           >
             Cancel
           </button>
-          <button 
-            onClick={() => {
-              alert('Tool submitted for review successfully!');
-              onClose();
-            }}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-xl text-xs font-extrabold transition-colors shadow-lg shadow-emerald-900/20"
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-extrabold text-slate-950 shadow-lg shadow-emerald-900/20 transition-colors hover:bg-emerald-500"
           >
             Submit Tool
           </button>
