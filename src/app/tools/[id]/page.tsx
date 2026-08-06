@@ -1,53 +1,22 @@
 // =====================================================================
-// MARKET1 DYNAMIC TOOL PAGE (App Router)
-// This single file renders all 1,300+ tools based on the registry.
+// MARKET1 HOME PAGE
+// Automatically loads tools from the MUTE Registry.
 // =====================================================================
 
-import { notFound } from 'next/navigation';
-import { getToolConfig } from '../../../data/registry';
-import { UniversalToolEngine } from '../../../components/UniversalToolEngine';
-import { UniversalLanding } from '../../../components/UniversalLanding';
+import { TOOL_REGISTRY } from '../data/registry';
+import { UniversalMarketplace } from '../components/UniversalMarketplace';
 import { Metadata } from 'next';
 
-interface ToolPageProps {
-  params: { id: string };
-}
+export const metadata: Metadata = {
+  title: 'Market1 | The Universal AI & Tool Platform',
+  description: 'Access hundreds of professional tools for PDF, Images, Video, and AI processing in one platform.',
+};
 
-// 🚀 DYNAMIC SEO GENERATOR
-export async function generateMetadata({ params }: ToolPageProps): Promise<Metadata> {
-  const tool = getToolConfig(params.id);
-  if (!tool) return { title: 'Tool Not Found | Market1' };
-
-  return {
-    title: `${tool.name} | Free Online Tool - Market1`,
-    description: tool.description,
-    keywords: tool.seoKeywords.join(', '),
-  };
-}
-
-export default function ToolPage({ params }: ToolPageProps) {
-  // 1. Fetch Configuration
-  const tool = getToolConfig(params.id);
-
-  // 2. Validate Existence
-  if (!tool) {
-    notFound(); // Triggers Next.js 404 page automatically
-  }
-
+export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[#0A0A0A]">
-      
-      {/* 🚀 THE UNIVERSAL TOOL ENGINE (The actual workspace) */}
-      <UniversalToolEngine 
-        tool={tool} 
-        onBack={() => window.history.back()} 
-      />
-      
-      <hr className="border-white/5" />
-
-      {/* 🌍 THE UNIVERSAL LANDING PAGE (SEO & Context) */}
-      <UniversalLanding tool={tool} />
-
+    <main>
+      {/* 🚀 Render the Universal Marketplace with all our registered tools */}
+      <UniversalMarketplace tools={TOOL_REGISTRY} />
     </main>
   );
 }
