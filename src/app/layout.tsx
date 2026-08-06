@@ -1,5 +1,5 @@
 // =====================================================================
-// MARKET1 OS ROOT LAYOUT (NEXT.JS APP ROUTER)
+// MARKET1 OS ROOT LAYOUT
 // =====================================================================
 
 import './globals.css';
@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="bg-[#0A0A0A] text-[#E0E0E0] font-mono antialiased min-h-screen selection:bg-emerald-500 selection:text-slate-950">
+      <body className="bg-[#0A0A0A] text-[#E0E0E0] font-mono min-h-screen antialiased">
         {children}
       </body>
     </html>
