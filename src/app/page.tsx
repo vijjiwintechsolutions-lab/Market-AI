@@ -1,6 +1,5 @@
 // =====================================================================
 // MARKET1 OS ROOT PAGE (NEXT.JS APP ROUTER)
-// Directly orchestrates marketplace layout and modal states.
 // =====================================================================
 
 'use client';
