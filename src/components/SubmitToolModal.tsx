@@ -1,12 +1,11 @@
 // =====================================================================
 // MARKET1 SUBMIT TOOL MODAL (MUTE)
-// Allows community or developer tool submissions.
 // =====================================================================
 
 'use client';
 
 import React, { useState } from 'react';
-import { X, PlusCircle, AlertCircle } from 'lucide-react';
+import { X, PlusCircle } from 'lucide-react';
 import { ToolCategory } from '../types/mute';
 
 interface SubmitToolModalProps {
