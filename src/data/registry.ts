@@ -1,3 +1,107 @@
+Skip to content
+vijjiwintechsolutions-lab
+Market-AI
+Repository navigation
+Code
+Issues
+Pull requests
+Agents
+Actions
+Projects
+Wiki
+Security and quality
+1
+ (1)
+Insights
+Settings
+Files
+src/data/registry.ts
+api
+assets
+src
+app/tools/[id]
+page.tsx
+components
+data
+promptsData.ts
+registry.ts
+toolPresets.ts
+toolsData.ts
+lib
+services
+types
+utils
+App.tsx
+index.css
+main.tsx
+.env.example
+.gitignore
+bun.lock
+firebase-applet-config.json
+firebase-blueprint.json
+firestore.rules
+index.html
+metadata.json
+package.json
+server.ts
+tsconfig.json
+vercel.json
+vite.config.ts
+Market-AI/src/data
+/
+registry.ts
+in
+main
+
+Edit
+
+Preview
+Indent mode
+
+Spaces
+Indent size
+
+2
+Line wrap mode
+
+No wrap
+Editing registry.ts file contents
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 22
+ 23
+ 24
+ 25
+ 26
+ 27
+ 28
+ 29
+ 30
+ 31
+ 32
+ 33
+ 34
+ 35
+ 36
 import { MuteToolConfig } from '../types/mute';
 
 // =====================================================================
@@ -34,48 +138,4 @@ export const TOOL_REGISTRY: MuteToolConfig[] = [
     id: 'ai-image-generator',
     name: 'AI Text to Image',
     category: 'Image & Graphics',
-    description: 'Generate stunning, hyper-realistic images using advanced AI models.',
-    seoKeywords: ['ai image generator', 'text to image', 'flux ai'],
-    engine: 'ai',
-    processor: 'fal.ai', // Engine router knows to hit AI Gateway
-    accepts: ['prompt'], // Text input only, no file upload
-    outputs: ['jpg', 'png', 'webp'],
-    options: [
-      { id: 'prompt', label: 'Detailed Prompt', type: 'textarea', defaultValue: 'A futuristic cyberpunk city', required: true },
-      { id: 'aspectRatio', label: 'Aspect Ratio', type: 'select', options: ['1:1', '16:9', '9:16'], defaultValue: '16:9' }
-    ],
-    validation: { requireAuthentication: true, requireWalletCredits: 5 },
-    capabilities: { hasPreview: true, hasDownload: true, hasHistory: true, allowMultipleUploads: false },
-    aiConfig: {
-      primaryProvider: 'fal.ai',
-      fallbackProvider: 'openrouter',
-      modelId: 'flux/schnell',
-      fallbackModelId: 'stable-diffusion-xl'
-    }
-  },
-
-  // ---------------------------------------------------------
-  // 3. BACKEND TOOL: Image Compressor (Routes to Node/Sharp)
-  // ---------------------------------------------------------
-  {
-    id: 'image-compressor',
-    name: 'Smart Image Compressor',
-    category: 'Image & Graphics',
-    description: 'Reduce image file size by up to 80% without losing visual quality.',
-    seoKeywords: ['compress image', 'reduce image size', 'optimize jpg'],
-    engine: 'backend',
-    processor: 'sharp', // Engine router knows to hit Next.js Backend API
-    accepts: ['jpg', 'png', 'webp'],
-    outputs: ['jpg', 'webp'],
-    options: [
-      { id: 'quality', label: 'Compression Quality (%)', type: 'slider', min: 10, max: 100, step: 1, defaultValue: 80 }
-    ],
-    validation: { maxFileSizeMB: 25, maxFiles: 10 },
-    capabilities: { hasPreview: true, hasDownload: true, hasHistory: true, allowMultipleUploads: true }
-  }
-];
-
-// Helper function for the Router to easily fetch configurations
-export const getToolConfig = (toolId: string): MuteToolConfig | undefined => {
-  return TOOL_REGISTRY.find(tool => tool.id === toolId);
-};
+Use Control + Shift + m to toggle the tab key moving focus. Alternatively, use esc then tab to move to the next interactive element on the page.
