@@ -14,9 +14,10 @@ import { UniversalDownloadEngine } from '../services/downloadEngine';
 import { UniversalHistoryEngine } from '../services/historyEngine';
 import { UniversalAnalyticsEngine } from '../services/analyticsEngine';
 import { UniversalWalletEngine } from '../services/walletEngine';
+import { UniversalSubscriptionEngine } from '../services/subscriptionEngine';
 import { UniversalPreview } from './UniversalPreview';
 
-// Firebase Auth for Credit Deduction
+// Firebase Auth
 import { auth } from '../config/firebase';
 
 interface UniversalToolEngineProps {
@@ -74,7 +75,7 @@ export const UniversalToolEngine: React.FC<UniversalToolEngineProps> = ({ tool, 
   const handleExecute = async () => {
     setValidationError(null);
     
-    // 🛡️ 1. MUTE UNIVERSAL VALIDATION ENGINE (Now checks auth & wallet async)
+    // 🛡️ 1. MUTE UNIVERSAL VALIDATION ENGINE (Checks auth, wallet, & subscriptions)
     const validation = await UniversalValidationEngine.validate(tool, inputValues, uploadedFiles);
     if (!validation.isValid) {
       setValidationError(validation.errorMessage || 'Validation failed.');
@@ -104,9 +105,12 @@ export const UniversalToolEngine: React.FC<UniversalToolEngineProps> = ({ tool, 
           if (res.mediaUrl) setMediaOutputUrl(res.mediaUrl);
           if (res.fileUrl) setFileDownloadUrl(res.fileUrl);
 
-          // 💳 3. MUTE WALLET ENGINE: Deduct Credits
-          if (tool.validation?.requireWalletCredits && auth.currentUser) {
-            UniversalWalletEngine.deductCredits(auth.currentUser.uid, tool.validation.requireWalletCredits);
+          // 💳 3. MUTE WALLET & SUBSCRIPTION ENGINE
+          if (auth.currentUser) {
+            if (tool.validation?.requireWalletCredits) {
+              UniversalWalletEngine.deductCredits(auth.currentUser.uid, tool.validation.requireWalletCredits);
+            }
+            UniversalSubscriptionEngine.incrementDailyUsage(auth.currentUser.uid);
           }
           
           // 🕰️ 4. MUTE HISTORY & ANALYTICS (SUCCESS)
