@@ -1,0 +1,10 @@
+"use strict";(()=>{var e={};e.id=756,e.ids=[756],e.modules={399:e=>{e.exports=require("next/dist/compiled/next-server/app-page.runtime.prod.js")},517:e=>{e.exports=require("next/dist/compiled/next-server/app-route.runtime.prod.js")},2684:(e,t,r)=>{r.r(t),r.d(t,{originalPathname:()=>g,patchFetch:()=>f,requestAsyncStorage:()=>c,routeModule:()=>p,serverHooks:()=>d,staticGenerationAsyncStorage:()=>l});var o={};r.r(o),r.d(o,{POST:()=>i});var s=r(9303),a=r(8716),n=r(670),u=r(7070);async function i(e){try{let t=await e.formData(),r=t.get("toolId"),o=t.get("processor"),s=t.get("files");if(console.log(`[MUTE Backend Gateway] Executing Tool: ${r} via ${o}`),!s)throw Error("No file uploaded for backend processing.");let a=await s.arrayBuffer(),n=Buffer.from(a);if("sharp"===o){let e=parseInt(t.get("opts_quality")||"80"),r=n.toString("base64"),a=s.type||"image/jpeg",i=`data:${a};base64,${r}`;return u.NextResponse.json({success:!0,fileUrl:i,mediaUrl:i,textOutput:`### ⚙️ Backend Process Complete
+
+- **Engine:** Node.js Backend
+- **Processor:** ${o}
+- **Quality:** ${e}%
+- **Status:** File successfully optimized.`})}if("ffmpeg"===o){let e=t.get("opts_fps");return u.NextResponse.json({success:!0,textOutput:`### 🎬 Video Processing Complete
+
+- **Engine:** FFmpeg Server
+- **FPS:** ${e}
+- **Status:** Conversion successful.`})}throw Error(`Unsupported backend processor: ${o}`)}catch(e){return console.error("[MUTE Backend Gateway Error]:",e),u.NextResponse.json({success:!1,error:e.message},{status:500})}}let p=new s.AppRouteRouteModule({definition:{kind:a.x.APP_ROUTE,page:"/api/tools/execute/route",pathname:"/api/tools/execute",filename:"route",bundlePath:"app/api/tools/execute/route"},resolvedPagePath:"/workspaces/Market-AI/src/app/api/tools/execute/route.ts",nextConfigOutput:"",userland:o}),{requestAsyncStorage:c,staticGenerationAsyncStorage:l,serverHooks:d}=p,g="/api/tools/execute/route";function f(){return(0,n.patchFetch)({serverHooks:d,staticGenerationAsyncStorage:l})}}};var t=require("../../../../webpack-runtime.js");t.C(e);var r=e=>t(t.s=e),o=t.X(0,[948,972],()=>r(2684));module.exports=o})();

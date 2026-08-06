@@ -1,0 +1,10 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/sitemap.xml/route": "app/sitemap.xml/route.js",
+  "/api/ai/execute/route": "app/api/ai/execute/route.js",
+  "/tools/[id]/page": "app/tools/[id]/page.js",
+  "/robots.txt/route": "app/robots.txt/route.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/tools/execute/route": "app/api/tools/execute/route.js"
+}
