@@ -91,20 +91,20 @@ class UniversalProcessingRouter {
       }
 
       const pdfBytes = await newPdf.save({ useObjectStreams: true });
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      return { textOutput, fileUrl: URL.createObjectURL(blob) };
-    }
 
-    if (tool.processor === 'financial-math') {
-      const p = parseFloat(inputValues.loanAmount || '1000000');
-      const r = parseFloat(inputValues.interestRate || '8.5');
-      const n = parseFloat(inputValues.tenureYears || '15');
-      const mRate = r / 12 / 100;
-      const tMonths = n * 12;
-      const emi = (p * mRate * Math.pow(1 + mRate, tMonths)) / (Math.pow(1 + mRate, tMonths) - 1);
-      const textOutput = `### 📊 Financial Calculation\n\n- **Monthly EMI:** ₹${Math.round(emi).toLocaleString('en-IN')}\n- **Principal:** ₹${Math.round(p).toLocaleString('en-IN')}\n- **Total Payable:** ₹${Math.round(emi * tMonths).toLocaleString('en-IN')}`;
-      const blob = new Blob(['\ufeff' + textOutput], { type: 'text/plain;charset=utf-8' });
-      return { textOutput, fileUrl: URL.createObjectURL(blob) };
+const arrayBuffer = pdfBytes.buffer.slice(
+  pdfBytes.byteOffset,
+  pdfBytes.byteOffset + pdfBytes.byteLength
+) as ArrayBuffer;
+
+const blob = new Blob([arrayBuffer], {
+  type: 'application/pdf',
+});
+
+return {
+  textOutput,
+  fileUrl: URL.createObjectURL(blob),
+};
     }
 
     // Default Browser Fallback (Text/Prompts)
