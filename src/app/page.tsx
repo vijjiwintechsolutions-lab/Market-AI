@@ -3,7 +3,7 @@
 // Bridges the root URL '/' to the main App component.
 // =====================================================================
 
-import App from '../../App';
+import App from '../App';
 
 export default function Page() {
   return <App />;
