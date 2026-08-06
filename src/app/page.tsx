@@ -5,8 +5,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Navbar } from '@/components/Navbar';
-import { UniversalMarketplace } from '@/components/UniversalMarketplace';
+import { Navbar } from '../components/Navbar';
+import { UniversalMarketplace } from '../components/UniversalMarketplace';
 
 export default function Page() {
   const [searchQuery, setSearchQuery] = useState('');
